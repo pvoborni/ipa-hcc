@@ -2,12 +2,11 @@
 
 ## Supported OS
 
-- rhel-8.7
-- rhel-8.8 (dev)
-- rhel-9.1
-- rhel-9.2 (dev)
+- rhel-8.8
+- rhel-9.2
 
-(*) Kerberos KDC on RHEL 8.6 server uses SHA-1 for PKINIT, which is
+RHEL 8.7 / 9.1 and older do not support `ipa-client-install` with PKINIT.
+Kerberos KDC on RHEL 8.6 server uses SHA-1 for PKINIT, which is
 incompatible with RHEL 9's crypto policy.
 
 ## Configuration

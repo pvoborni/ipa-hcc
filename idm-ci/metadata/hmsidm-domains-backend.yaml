@@ -9,7 +9,7 @@ domains:
         role: master
         group: ipaserver
         os: rhel-9.2
-      - name: client.hmsidm-dev.test
+      - name: client92.hmsidm-dev.test
         role: client
         group: ipaclient
         os: rhel-9.2

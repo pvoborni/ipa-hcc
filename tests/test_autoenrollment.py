@@ -70,7 +70,6 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         modname = "ipahcc_auto_enrollment"
         p = mock.patch.multiple(
             modname,
-            HAS_KINIT_PKINIT=False,
             RHSM_CERT=conftest.RHSM_CERT,
             RHSM_KEY=conftest.RHSM_KEY,
             RHSM_CONF=conftest.NO_FILE,
@@ -314,16 +313,15 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 data = f.read()
             self.assertEqual(data, conftest.KDC_CA_DATA)
 
-    def test_enroll_host_pkinit(self):
+    def test_enroll_host(self):
         args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
 
-        with mock.patch.object(auto_enrollment, "HAS_KINIT_PKINIT", True):
-            ae = auto_enrollment.AutoEnrollment(args)
-            with ae:
-                tmpdir = ae.tmpdir
-                ae.enroll_host()
-                self.assertTrue(os.path.isfile(ae.ipa_cacert))
-                self.assertTrue(os.path.isfile(ae.kdc_cacert))
+        ae = auto_enrollment.AutoEnrollment(args)
+        with ae:
+            tmpdir = ae.tmpdir
+            ae.enroll_host()
+            self.assertTrue(os.path.isfile(ae.ipa_cacert))
+            self.assertTrue(os.path.isfile(ae.kdc_cacert))
 
         self.assertEqual(self.m_urlopen.call_count, 2)
         self.assertEqual(self.m_run.call_count, 1)
@@ -341,92 +339,13 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 conftest.DOMAIN,
                 "--realm",
                 conftest.REALM,
-                "--unattended",
                 "--pkinit-identity",
                 f"FILE:{auto_enrollment.RHSM_CERT},{auto_enrollment.RHSM_KEY}",
                 "--pkinit-anchor",
                 f"FILE:{tmpdir}/kdc_ca.crt",
                 "--pkinit-anchor",
                 f"FILE:{tmpdir}/ipa_ca.crt",
-            ],
-        )
-        self.assertEqual(
-            kwargs, {"stdin": None, "env": None, "raiseonerr": True}
-        )
-
-    def test_enroll_host_keytab(self):
-        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
-        ae = auto_enrollment.AutoEnrollment(args)
-        with ae:
-            tmpdir = ae.tmpdir
-            ae.enroll_host()
-            self.assertTrue(os.path.isfile(ae.ipa_cacert))
-            self.assertTrue(os.path.isfile(ae.kdc_cacert))
-
-        self.assertEqual(self.m_urlopen.call_count, 2)
-        self.assertEqual(self.m_run.call_count, 3)
-
-        principal = f"host/{conftest.CLIENT_FQDN}@{conftest.REALM}"
-        keytab = f"{tmpdir}/host.keytab"
-        cacert = f"{tmpdir}/ipa_ca.crt"
-        # kinit
-        args, kwargs = self.m_run.call_args_list[0]
-        self.assertEqual(
-            args[0],
-            [
-                paths.KINIT,
-                "-X",
-                f"X509_anchors=FILE:{tmpdir}/kdc_ca.crt",
-                "-X",
-                f"X509_anchors=FILE:{tmpdir}/ipa_ca.crt",
-                "-X",
-                f"X509_user_identity=FILE:{auto_enrollment.RHSM_CERT},{auto_enrollment.RHSM_KEY}",
-                principal,
-            ],
-        )
-        self.assertEqual(kwargs["stdin"], "\n")
-        self.assertTrue(
-            set(kwargs["env"]).issuperset(
-                {"LC_ALL", "KRB5_CONFIG", "KRB5CCNAME"}
-            ),
-            kwargs["env"],
-        )
-
-        # ipa-getkeytab
-        args, kwargs = self.m_run.call_args_list[1]
-        self.assertEqual(
-            args[0],
-            [
-                paths.IPA_GETKEYTAB,
-                "-s",
-                conftest.SERVER_FQDN,
-                "-p",
-                principal,
-                "-k",
-                keytab,
-                "--cacert",
-                cacert,
-            ],
-        )
-        self.assertEqual(kwargs["stdin"], None)
-
-        # ipa-client-install
-        args, kwargs = self.m_run.call_args_list[2]
-        self.assertEqual(
-            args[0],
-            [
-                paths.IPA_CLIENT_INSTALL,
-                "--ca-cert-file",
-                cacert,
-                "--hostname",
-                conftest.CLIENT_FQDN,
-                "--domain",
-                conftest.DOMAIN,
-                "--realm",
-                conftest.REALM,
                 "--unattended",
-                "--keytab",
-                keytab,
             ],
         )
         self.assertEqual(

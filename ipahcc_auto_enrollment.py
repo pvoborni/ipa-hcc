@@ -33,15 +33,6 @@ from ipapython.dnsutil import query_srv
 from ipapython.ipautil import run
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
-try:
-    # pylint: disable=unused-import,ungrouped-imports
-    from ipalib.install.kinit import kinit_pkinit  # noqa: F401
-except ImportError:
-    HAS_KINIT_PKINIT = False
-else:
-    # IPA >= 4.9.10 / 4.10.1
-    HAS_KINIT_PKINIT = True
-
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
@@ -193,7 +184,7 @@ parser.add_argument(
     "--upto",
     metavar="PHASE",
     help=argparse.SUPPRESS,
-    choices=("host-conf", "register", "pkinit", "keytab"),
+    choices=("host-conf", "register"),
 )
 parser.add_argument(
     "--override-server",
@@ -201,38 +192,6 @@ parser.add_argument(
     help=argparse.SUPPRESS,
     type=check_arg_hostname,
 )
-
-
-# configure_krb5_conf() adds unwanted entries and sometimes creates a
-# bad krb5.conf.
-KRB5_CONF = """\
-# includedir /etc/krb5.conf.d/
-
-[libdefaults]
-  default_realm = {realm}
-  dns_lookup_realm = false
-  rdns = false
-  dns_canonicalize_hostname = false
-  dns_lookup_kdc = true
-  ticket_lifetime = 24h
-  forwardable = true
-  udp_preference_limit = 0
-
-[realms]
-  {realm} = {{
-    kdc = {server}:88
-    master_kdc = {server}:88
-    admin_server = {server}:749
-    kpasswd_server = {server}:464
-    {extra_kdcs}
-    default_domain = {domain}
-  }}
-
-[domain_realm]
-  {hostname} = {realm}
-  .{domain} = {realm}
-  {domain} = {realm}
-"""
 
 
 class SystemStateError(Exception):
@@ -412,18 +371,7 @@ class AutoEnrollment:
         self.hcc_register()
         self.check_upto("register")
 
-        if HAS_KINIT_PKINIT and self.args.upto is None:
-            self.ipa_client_pkinit()
-        else:
-            host_principal = f"host/{self.args.hostname}@{self.realm}"
-            self.create_krb5_conf()
-            self.pkinit(host_principal)
-            self.check_upto("pkinit")
-
-            keytab = self.getkeytab(host_principal)
-            self.check_upto("keytab")
-
-            self.ipa_client_keytab(keytab)
+        self.ipa_client_install()
 
     def check_upto(self, phase) -> None:
         if self.args.upto is not None and self.args.upto == phase:
@@ -649,52 +597,8 @@ class AutoEnrollment:
             f.write(j["kdc_cabundle"])
         return j
 
-    def create_krb5_conf(self) -> None:
-        """Create a temporary krb5.conf"""
-        if typing.TYPE_CHECKING:
-            assert self.servers
-        extra_kdcs = [
-            f"kdc = {server}:88"
-            for server in self.servers
-            if server != self.server
-        ]
-        conf = KRB5_CONF.format(
-            realm=self.realm,
-            domain=self.domain,
-            server=self.server,
-            extra_kdcs="\n    ".join(extra_kdcs).strip(),
-            hostname=self.args.hostname,
-        )
-        logger.debug("Creating %s with content:\n%s", self.krb_name, conf)
-        with open(self.krb_name, "w", encoding="utf-8") as f:
-            f.write(conf)
-
-    def pkinit(self, host_principal: str) -> None:
-        """Perform kinit with X509_user_identity (PKINIT)"""
-        cmd = [paths.KINIT]
-        for anchor in self.pkinit_anchors:
-            cmd.extend(["-X", f"X509_anchors={anchor}"])
-        cmd.extend(["-X", f"X509_user_identity={self.pkinit_identity}"])
-        cmd.append(host_principal)
-        # send \n on stdin in case we get a password prompt
-        self._run(cmd, stdin="\n", setenv=True)
-
-    def getkeytab(self, host_principal):
-        """Retrieve keytab with ipa-getkeytab"""
-        keytab = os.path.join(self.tmpdir, "host.keytab")
-        # fmt: off
-        cmd = [
-            paths.IPA_GETKEYTAB,
-            "-s", self.server,
-            "-p", host_principal,
-            "-k", keytab,
-            "--cacert", self.ipa_cacert,
-        ]
-        # fmt: on
-        self._run(cmd, setenv=True)
-        return keytab
-
-    def _run_ipa_client(self, extra_args=()) -> None:
+    def ipa_client_install(self) -> None:
+        """Install IPA client with PKINIT"""
         # fmt: off
         cmd = [
             paths.IPA_CLIENT_INSTALL,
@@ -702,32 +606,19 @@ class AutoEnrollment:
             "--hostname", self.args.hostname,
             "--domain", self.domain,
             "--realm", self.realm,
+            "--pkinit-identity", self.pkinit_identity,
         ]
         # fmt: on
+        for anchor in self.pkinit_anchors:
+            cmd.extend(["--pkinit-anchor", anchor])
         # TODO: Make ipa-client-install prefer servers from current location.
         if self.args.override_server:
             cmd.extend(["--server", self.args.override_server])
         if self.args.force:
             cmd.append("--force")
         cmd.append("--unattended")
-        cmd.extend(extra_args)
 
-        self._run(cmd)
-
-    def ipa_client_keytab(self, keytab: str) -> None:
-        """Install IPA client with existing keytab"""
-        extra_args = ["--keytab", keytab]
-        self._run_ipa_client(extra_args)
-
-    def ipa_client_pkinit(self) -> None:
-        """Install IPA client with PKINIT"""
-        extra_args = [
-            "--pkinit-identity",
-            self.pkinit_identity,
-        ]
-        for anchor in self.pkinit_anchors:
-            extra_args.extend(["--pkinit-anchor", anchor])
-        self._run_ipa_client(extra_args)
+        return self._run(cmd)
 
 
 def main(args=None):

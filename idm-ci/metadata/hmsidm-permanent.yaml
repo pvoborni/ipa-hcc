@@ -8,15 +8,15 @@ domains:
       - name: server.ipahcc.test
         role: master
         group: ipaserver
-        os: rhel-9.1
+        os: rhel-9.2
       - name: replica1.ipahcc.test
         role: replica
         group: ipaserver
-        os: rhel-9.1
-      - name: client91.ipahcc.test
+        os: rhel-9.2
+      - name: client92.ipahcc.test
         role: client
         group: ipaclient
-        os: rhel-9.1
+        os: rhel-9.2
 phases:
   - name: init
     steps:

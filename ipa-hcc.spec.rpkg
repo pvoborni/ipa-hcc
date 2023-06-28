@@ -5,22 +5,21 @@
   %global ipa_name ipa
 
   # ipa-client-install supports PKINIT options since 4.9.11 (RHEL 8.8)
-  # and 4.10.1 (RHEL 9.2). Older clients use krb5-pkinit + ipa-getkeytab
-  # fallback.
+  # and 4.10.1 (RHEL 9.2).
   %if 0%{?rhel} >= 9
-    # RHEL 9.0 EUS has 4.9.8-8.el9_0
-    %global ipa_version 4.9.8
+    # RHEL 9.2+ with PKINIT support in ipa-client-install
+    %global ipa_version 4.10.1
     %global with_server 1
   %else
-    # RHEL 8.6 EUS has 4.9.8
-    %global ipa_version 4.9.8
+    # RHEL 8.8+ with PKINIT support in ipa-client-install
+    %global ipa_version 4.9.11
     %global with_platform_python 1
     %global with_server 1
   %endif
 %else
-  # Fedora (for development only)
+  # Fedora 37+ with PKINIT support in ipa-client-install
   %global ipa_name freeipa
-  %global ipa_version 4.10
+  %global ipa_version 4.10.1
   %global with_server 1
 %endif
 
