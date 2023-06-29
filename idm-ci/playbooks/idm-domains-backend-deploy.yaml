@@ -54,17 +54,15 @@
             dest: /idm-domains-backend/configs/config.yaml
             remote_src: yes
 
-        # compose-up fails because it cannot pull mockserver from Docker Hub
-        # docker.io/mockserver/mockserver: toomanyrequests: You have reached your pull rate limit.
-        - name: Log into Docker Hub
-          command: >
-            podman login
-              -u {{ hmsidm_config.docker_username }}
-              -p {{ hmsidm_config.docker_password }}
-              docker.io
-          when:
-            - hmsidm_config.docker_username
-            - hmsidm_config.docker_password
+        # - name: Log into Docker Hub
+        #   command: >
+        #     podman login
+        #       -u {{ hmsidm_config.docker_username }}
+        #       -p {{ hmsidm_config.docker_password }}
+        #       docker.io
+        #   when:
+        #     - hmsidm_config.docker_username
+        #     - hmsidm_config.docker_password
 
         - name: Build local tools
           command: make install-xrhidgen install-db-tool

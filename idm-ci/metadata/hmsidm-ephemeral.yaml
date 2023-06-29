@@ -1,7 +1,10 @@
 ---
 # hmsidm-ephemeral metadata file builds and installs RPMs from local checkout
-# deploys with existing ephemeral environment. See `EPHEMERAL.md` for details.
-
+# deploys with existing ephemeral environment.
+#
+# See `EPHEMERAL.md` for details.
+# See `idm-ci/secrets.ephemeral.example` for required env vars.
+#
 domains:
   - name: hmsidm-dev.test
     type: IPA

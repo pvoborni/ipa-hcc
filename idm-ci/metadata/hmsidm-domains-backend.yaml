@@ -1,6 +1,8 @@
 ---
 # metadata file to run tests with locally deployed idm-domains-backend
-
+#
+# See `idm-ci/secrets.compose.example` for required and optional env vars.
+#
 domains:
   - name: hmsidm-dev.test
     type: IPA

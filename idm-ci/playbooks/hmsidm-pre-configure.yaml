@@ -41,6 +41,7 @@
         mode: '0640'
         owner: ipahcc
         group: root
+      when: hmsidm_config.rh_api_token
 
     - name: Restart HTTPD if running to reload /etc/ipa/hcc.conf
       command: systemctl try-restart httpd

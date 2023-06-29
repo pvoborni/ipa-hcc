@@ -22,7 +22,7 @@
             msg="{{ ipahccregister.stdout }}"
 
         - name: Register domain on IPA server
-          command: "{{ ipahccregister.stdout }}"
+          command: "timeout 30 {{ ipahccregister.stdout }}"
           delegate_to: "{{ hostvars[groups.ipaserver.0].meta_fqdn }}"
 
 - hosts: ipaserver

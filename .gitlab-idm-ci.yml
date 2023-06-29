@@ -7,3 +7,11 @@ srv92_c88_92:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92.yaml
     RHC_ENV: "stage"
     # uses RHC_ORG, RHC_KEY, RH_API_TOKEN settings
+
+# test with idm-domains-backend, does not use RHC
+srv92_backend:
+  extends: .mr_template
+  needs: ["rpms", "tox_check"]
+  variables:
+    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92-backend.yaml
+    RHC_ENV: "compose"
