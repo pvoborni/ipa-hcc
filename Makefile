@@ -93,7 +93,7 @@ version:
 		$(srcdir)/pyproject.toml
 
 .PHONY: rpkg
-rpkg:
+rpkg: $(OPENAPI_YAML)
 	@if ! test -d .git; then echo "rpkg requires a git repository" >&2; exit 2; fi
 	@rm -rf $(RPKGDIR)
 	@mkdir -p $(RPKGDIR)
