@@ -174,7 +174,7 @@
         "rhel-idm"
       ]
     },
-    "Error": {
+    "ErrorInfo": {
       "title": "Error information",
       "type": "object",
       "required": [
@@ -230,6 +230,11 @@
       "maxLength": 36,
       "minLength": 36
     },
+    "HostToken": {
+      "title": "Host Token",
+      "description": "A serialized JWS token or JWT to authenticate a host registration request.",
+      "type": "string"
+    },
     "LocationName": {
       "title": "Location identifier (IPA location, AD site)",
       "description": "A location identifier (lower-case DNS label)",
@@ -251,6 +256,33 @@
       "maxLength": 253,
       "minLength": 3,
       "pattern": "^[A-Z0-9\\.\\-]+$"
+    },
+    "SigningKeys": {
+      "title": "Signing keys",
+      "description": "Serialized JWKs with revocation information",
+      "type": "object",
+      "required": [
+        "keys"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "keys": {
+          "description": "An array of serialized JSON Web Keys (JWK strings)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "revoked_kids": {
+          "description": "An array of revoked key identifiers (JWK kid)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
     },
     "SubscriptionManagerId": {
       "title": "Subscription manager id",

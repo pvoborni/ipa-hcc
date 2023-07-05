@@ -67,10 +67,15 @@ $(OPENAPI_YAML):
 ipahcc/server/schema/%.json: contrib/convert_schema.py $(OPENAPI_YAML)
 	contrib/convert_schema.py
 
-.PHONY: generate-schema
-generate-schema:
+.PHONY: generate-api
+generate-api:
 	rm -f ipahcc/server/schema/*.json
 	$(MAKE) ipahcc/server/schema/defs.json
+
+.PHONY: update-api
+update-api:
+	git submodule update --remote
+	$(MAKE) generate-api
 
 .PHONY: tox
 tox:

@@ -12,7 +12,7 @@
       "description": "Error objects provide additional information about problems encountered while performing an operation.",
       "type": "array",
       "items": {
-        "$ref": "defs.json#/$defs/Error"
+        "$ref": "defs.json#/$defs/ErrorInfo"
       },
       "minItems": 1,
       "readOnly": true

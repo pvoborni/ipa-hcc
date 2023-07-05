@@ -64,6 +64,9 @@
           "$ref": "defs.json#/$defs/RealmName"
         }
       }
+    },
+    "token": {
+      "$ref": "defs.json#/$defs/HostToken"
     }
   }
 }
