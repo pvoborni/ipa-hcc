@@ -17,6 +17,11 @@ domains:
         role: client
         group: ipaclient
         os: rhel-9.2
+      - name: backend.ipahcc.test
+        role: backend
+        size: medium
+        group: ipaclient
+        os: rhel-9.2
 phases:
   - name: init
     steps:
@@ -25,6 +30,7 @@ phases:
     steps:
       - playbook: provision/mrack-up.yaml
       - playbook: provision/wait.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-dump-hosts.yaml
   - name: prep
     steps:
       - playbook: prep/prefer-ipv4.yaml
@@ -35,7 +41,10 @@ phases:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml
-  - name: test
+  - name: backend
+    steps:
+      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend-deploy.yaml
+  - name: server
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
@@ -45,6 +54,8 @@ phases:
       - playbook: prep/ipa-replica-install.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
+  - name: test
+    steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaclient
