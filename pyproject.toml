@@ -36,6 +36,7 @@ packages = [
     "ipahcc.mockapi",
     "ipahcc.registration",
     "ipahcc.server",
+    "ipahcc.sign",
     "ipaserver.install.plugins",
     "ipaserver.plugins",
 ]
@@ -88,6 +89,7 @@ module = [
     'augeas.*',
     'dbus.*',
     'gi.*',
+    'jwcrypto.*',
 ]
 ignore_missing_imports = true
 
