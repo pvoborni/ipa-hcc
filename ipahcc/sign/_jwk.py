@@ -18,6 +18,7 @@ from jwcrypto.common import (
 
 __all__ = (
     "JWKDict",
+    "JWKSet",
     "InvalidKey",
     "get_public_key",
     "load_key",
@@ -30,7 +31,9 @@ CRV_TO_ALG = {
     "P-256": "ES256",
     # "P-384": "ES384",
 }
-SUPPORTED_ALGS = set(CRV_TO_ALG.values())
+SUPPORTED_ALGS = list(CRV_TO_ALG.values())
+
+JWKSet = jwk.JWKSet
 
 JWKBase: jwk.JWK
 

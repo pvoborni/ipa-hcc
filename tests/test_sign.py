@@ -1,8 +1,12 @@
 import time
 import unittest
+from unittest import mock
 
 import jwcrypto.jwk
+import jwcrypto.jws
+import jwcrypto.jwt
 
+import conftest
 from ipahcc import sign
 
 
@@ -74,3 +78,134 @@ class TestJWK(unittest.TestCase):
 
         del pub["kid"]
         self.assert_load_key(pub, "Missing key identifier")
+
+
+class TestJWST(unittest.TestCase):
+    def generate_token(
+        self,
+        key,
+        cert_o=conftest.ORG_ID,
+        cert_cn=conftest.CLIENT_RHSM_ID,
+        inventory_id=conftest.CLIENT_INVENTORY_ID,
+        fqdn=conftest.CLIENT_FQDN,
+        domain_id=conftest.DOMAIN_ID,
+        **kwargs,
+    ):
+        return sign.generate_host_token(
+            key, cert_o, cert_cn, inventory_id, fqdn, domain_id, **kwargs
+        )
+
+    def validate_token(
+        self,
+        tok,
+        key,
+        cert_o=conftest.ORG_ID,
+        cert_cn=conftest.CLIENT_RHSM_ID,
+        inventory_id=conftest.CLIENT_INVENTORY_ID,
+        fqdn=conftest.CLIENT_FQDN,
+        domain_id=conftest.DOMAIN_ID,
+        **kwargs,
+    ):
+        return sign.validate_host_token(
+            tok,
+            key,
+            cert_o=cert_o,
+            cert_cn=cert_cn,
+            inventory_id=inventory_id,
+            fqdn=fqdn,
+            domain_id=domain_id,
+            **kwargs,
+        )
+
+    def test_jwt_single_sig(self):
+        # compact JWT with single signature
+        priv1 = sign.generate_private_key()
+        pub1 = sign.get_public_key(priv1)
+
+        tok = self.generate_token(priv1)
+        self.assertIsInstance(tok, jwcrypto.jwt.JWT)
+        self.assertIsInstance(tok, sign.MultiJWST)
+
+        compact = tok.serialize()
+        self.assertIsInstance(compact, str)
+        self.assertEqual(compact.count("."), 2)
+        j = tok.serialize(compact=False)
+        self.assertIsInstance(j, str)
+        self.assertIsInstance(sign.json_decode(j), dict)
+
+        self.validate_token(compact, pub1)
+        self.validate_token(j, pub1)
+
+        pub_set = sign.JWKSet()
+        pub_set.add(pub1)
+        self.validate_token(compact, pub_set)
+        self.validate_token(j, pub_set)
+
+        priv2 = sign.generate_private_key()
+        pub2 = sign.get_public_key(priv2)
+        other_set = sign.JWKSet()
+        other_set.add(pub2)
+
+        with self.assertRaises(jwcrypto.jws.InvalidJWSSignature):
+            self.validate_token(compact, pub2)
+        with self.assertRaises(jwcrypto.jwt.JWTMissingKey):
+            self.validate_token(j, other_set)
+
+    def test_jwt_multi_sig(self):
+        priv1 = sign.generate_private_key()
+        pub1 = sign.get_public_key(priv1)
+        priv2 = sign.generate_private_key()
+        pub2 = sign.get_public_key(priv2)
+        priv3 = sign.generate_private_key()
+        pub3 = sign.get_public_key(priv3)
+
+        priv_set = sign.JWKSet()
+        priv_set.add(priv1)
+        priv_set.add(priv2)
+
+        pub_set = sign.JWKSet()
+        pub_set.add(pub1)
+        pub_set.add(pub2)
+
+        other_set = sign.JWKSet()
+        other_set.add(pub3)
+
+        tok = self.generate_token(priv_set)
+        j = tok.serialize(compact=False)
+
+        self.validate_token(j, pub1)
+        self.validate_token(j, pub2)
+        self.validate_token(j, pub_set)
+
+        with self.assertRaises(jwcrypto.jws.InvalidJWSSignature):
+            self.validate_token(j, pub3)
+        with self.assertRaises(jwcrypto.jwt.JWTMissingKey):
+            self.validate_token(j, other_set)
+
+    def test_jwt_claim_mismatch(self):
+        # compact JWT with single signature
+        priv = sign.generate_private_key()
+        pub = sign.get_public_key(priv)
+        tok = self.generate_token(priv, fqdn="client.other.test")
+
+        with self.assertRaises(jwcrypto.jwt.JWTInvalidClaimValue):
+            self.validate_token(tok.serialize(), pub)
+        with self.assertRaises(jwcrypto.jwt.JWTInvalidClaimValue):
+            self.validate_token(tok.serialize(compact=False), pub)
+
+    def test_jwt_time(self):
+        # compact JWT with single signature
+        priv = sign.generate_private_key()
+        pub = sign.get_public_key(priv)
+        tok = self.generate_token(priv, fqdn="client.other.test")
+
+        now = time.time()
+
+        with mock.patch("time.time") as m_time:
+            m_time.return_value = now - 70
+            with self.assertRaises(jwcrypto.jwt.JWTNotYetValid):
+                self.validate_token(tok.serialize(), pub)
+
+            m_time.return_value = now + 900
+            with self.assertRaises(jwcrypto.jwt.JWTExpired):
+                self.validate_token(tok.serialize(), pub)
