@@ -46,6 +46,10 @@ DOMAIN_RESULT.update(
         "description": "Some description",
         "auto_enrollment_enabled": True,
         "domain_id": conftest.DOMAIN_ID,
+        "signing_keys": {
+            "keys": ["good JWK"],
+            "revoked_kids": ["bad key id"],
+        },
     }
 )
 DOMAIN_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(

@@ -4,9 +4,12 @@ from unittest import mock
 import gssapi
 
 import conftest
-from ipahcc import hccplatform
+from ipahcc import hccplatform, sign
 from ipahcc.registration import wsgi
 from ipahcc.server import dbus_client
+
+PRIV_KEY = sign.generate_private_key()
+PUB_KEY = sign.get_public_key(PRIV_KEY)
 
 
 class TestRegistrationWSGI(conftest.IPABaseTests):
@@ -21,6 +24,11 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
                 "hccorgid": (conftest.ORG_ID,),
             }
         }
+
+        p = mock.patch.object(wsgi.Application, "_load_pub_jwk")
+        self.m_load_jwk = p.start()
+        self.m_load_jwk.return_value = PUB_KEY
+        self.addCleanup(p.stop)
 
         self.app = wsgi.Application(self.m_api)
 
@@ -60,10 +68,19 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
                 "",
             )
         )
+        tok = sign.generate_host_token(
+            PRIV_KEY,
+            cert_o=conftest.ORG_ID,
+            cert_cn=conftest.CLIENT_RHSM_ID,
+            inventory_id=conftest.CLIENT_INVENTORY_ID,
+            fqdn=conftest.CLIENT_FQDN,
+            domain_id=conftest.DOMAIN_ID,
+        )
         body = {
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": conftest.DOMAIN,
             "domain_id": conftest.DOMAIN_ID,
+            "token": tok.serialize(compact=False),
         }
         path = "/".join(
             ("", conftest.CLIENT_INVENTORY_ID, conftest.CLIENT_FQDN)

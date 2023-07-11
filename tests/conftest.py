@@ -43,6 +43,7 @@ NO_FILE = os.path.join(TESTDATA, "autoenrollment", "file-does-not-exist")
 
 KDC_CONF = os.path.join(TESTDATA, "kdc.conf")
 
+DUMMY_TOKEN = "dummy token"  # noqa: S105
 # patch
 paths.IPA_CA_CRT = IPA_CA_CRT
 hccplatform.HMSIDM_CACERTS_DIR = KDC_CA_DIR

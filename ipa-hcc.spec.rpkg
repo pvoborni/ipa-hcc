@@ -263,10 +263,12 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{python_sitelib}/ipahcc/*.py
 %{python_sitelib}/ipahcc/server/*.py
 %{python_sitelib}/ipahcc/server/schema/*.json
+%{python_sitelib}/ipahcc/sign/*.py
 %{python_sitelib}/ipaserver/plugins/*.py
 %{python_sitelib}/ipaserver/install/plugins/update_hcc.py
 %{python_sitelib}/ipahcc/__pycache__/*.pyc
 %{python_sitelib}/ipahcc/server/__pycache__/*.pyc
+%{python_sitelib}/ipahcc/sign/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/plugins/__pycache__/*.pyc
 %{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc.*.pyc
 %{_datadir}/ipa/schema.d/85-hcc.ldif
