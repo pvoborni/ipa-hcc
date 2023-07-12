@@ -29,7 +29,6 @@ HOST_CONF_RESPONSE = {
             {"fqdn": conftest.SERVER_FQDN},
         ],
     },
-    "inventory_id": conftest.CLIENT_INVENTORY_ID,
 }
 
 REGISTER_REQUEST = {

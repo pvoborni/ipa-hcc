@@ -211,7 +211,6 @@ class Application(JSONWSGIApp):
                     {"fqdn": self.api.env.host},
                 ],
             },
-            "inventory_id": inventory_id,
         }
         return response
 

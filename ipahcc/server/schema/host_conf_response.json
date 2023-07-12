@@ -8,7 +8,6 @@
     "domain_id",
     "domain_name",
     "domain_type",
-    "inventory_id",
     "rhel-idm"
   ],
   "additionalProperties": false,
@@ -25,9 +24,6 @@
     },
     "domain_type": {
       "$ref": "defs.json#/$defs/DomainType"
-    },
-    "inventory_id": {
-      "$ref": "defs.json#/$defs/HostId"
     },
     "rhel-idm": {
       "type": "object",
