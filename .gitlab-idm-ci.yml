@@ -7,6 +7,9 @@ srv92_c88_92:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92.yaml
     RHC_ENV: "stage"
     # uses RHC_ORG, RHC_KEY, RH_API_TOKEN settings
+  except:
+    variables:
+      - $CI_MERGE_REQUEST_LABELS =~ /.*skip idm-ci.*/
 
 # test with idm-domains-backend, does not use RHC
 srv92_backend:
@@ -15,3 +18,6 @@ srv92_backend:
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92-backend.yaml
     RHC_ENV: "compose"
+  except:
+    variables:
+      - $CI_MERGE_REQUEST_LABELS =~ /.*skip idm-ci.*/
