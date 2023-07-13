@@ -224,6 +224,10 @@ touch debugfiles.list
 %check
 export PYTHONPATH=%{buildroot}%{python_sitelib}
 %{python} -Wignore -m unittest discover  -s tests/
+# remove module after test run
+rm -f  %{buildroot}/%{python_sitelib}/ipahcc_auto_enrollment.py
+rm -rf %{buildroot}/%{python_sitelib}/__pycache__
+
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --help >/dev/null
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --version
 %if %{with server}
@@ -234,15 +238,21 @@ export PYTHONPATH=%{buildroot}%{python_sitelib}
 %install
 rm -rf $RPM_BUILD_ROOT
 
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_client
+%__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_python install_client
 
 %if %{with server}
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_server_plugin install_registration_service
+%__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_server_plugin install_registration_service
 touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
+%else
+rm -rf %{buildroot}/%{python_sitelib}/ipahcc
+rm -rf %{buildroot}/%{python_sitelib}/ipaserver
+rm -rf %{buildroot}/%{python_sitelib}/ipahcc*.egg-info
 %endif
 
 %if %{with mockapi}
-%__make DEST=%{buildroot} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_mockapi
+%__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_mockapi
+%else
+rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
 %endif
 
 
@@ -260,6 +270,8 @@ touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
 %{_unitdir}/ipa-hcc-dbus.service
 %{_datadir}/dbus-1/system.d/com.redhat.console.ipahcc.conf
 %{_datadir}/dbus-1/system-services/com.redhat.console.ipahcc.service
+%{python_sitelib}/ipahcc*.egg-info
+%{python_sitelib}/ipahcc/py.typed
 %{python_sitelib}/ipahcc/*.py
 %{python_sitelib}/ipahcc/server/*.py
 %{python_sitelib}/ipahcc/server/schema/*.json

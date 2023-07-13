@@ -10,8 +10,9 @@ from ipalib.parameters import Str
 
 # pylint: disable=import-error
 from ipaserver.plugins.config import config, config_mod, config_show
-from ipaserver.plugins.hccserverroles import hcc_enrollment_server_role
 from ipaserver.plugins.internal import i18n_messages
+
+from ipaserver.plugins.hccserverroles import hcc_enrollment_server_role
 
 # pylint: enable=import-error
 

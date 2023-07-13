@@ -259,7 +259,7 @@ def capture_output():
 
 
 def _fixup_ipaserver_import(name):
-    path = os.path.join(BASEDIR, name.replace(".", os.sep))
+    path = os.path.join(BASEDIR, "src", name.replace(".", os.sep))
     mod = importlib.import_module(name)
     mod.__path__.append(path)
 

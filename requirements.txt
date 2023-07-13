@@ -1,5 +1,4 @@
 requests
-coverage[toml]
 dbus-python
 pygobject
 # Fedora dev (ipaclient is taken from global env)

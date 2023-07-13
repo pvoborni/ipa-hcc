@@ -7,10 +7,11 @@ __pycache__
 /.coverage*
 /build
 /dist
-/*.egg-info
-/*.dist-info
+/.venv
+/src/*.egg-info
+/src/*.dist-info
 
-.tox
+/.tox
 
 /refresh_token
 /ipa-hcc.spec

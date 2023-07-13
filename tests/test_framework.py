@@ -7,15 +7,15 @@ from ipahcc.server.hccapi import APIResult
 
 class Application(JSONWSGIApp):
     @route("GET", "^/$")
-    def index(self, env, body):
+    def index(self, env, body):  # pylint: disable=unused-argument
         return {"status": "ok"}
 
     @route("GET", "^/fail$")
-    def fail(self, env, body):
+    def fail(self, env, body):  # pylint: disable=unused-argument
         raise ValueError
 
     @route("GET", "^/cert$")
-    def cert(self, env, body):
+    def cert(self, env, body):  # pylint: disable=unused-argument
         org_id, rhsm_id = self.parse_cert(env)
         return {"org_id": org_id, "subscription_manager_id": rhsm_id}
 

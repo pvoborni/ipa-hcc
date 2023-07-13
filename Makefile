@@ -6,6 +6,8 @@ DEST =
 
 # /etc
 SYSCONFDIR := $(shell rpm --eval '%{_sysconfdir}')
+# /usr
+PREFIX = $(shell rpm --eval '%{_prefix}')
 # /usr/share
 DATADIR := $(shell rpm --eval '%{_datadir}')
 # /usr/bin/pythonX
@@ -38,9 +40,10 @@ RPKGDIR=$(abs_srcdir)/build/rpkg
 CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem
 OPENAPI_YAML = api/public.openapi.yaml
 
+VENV = .venv
 
 .PHONY: all
-all: test rehash lint version
+all: test rehash lint version $(VENV)
 
 .PHONY: clean-idm-ci
 clean-idm-ci:
@@ -56,10 +59,12 @@ clean:
 	rm -rf .mypy_cache
 	rm -rf $(RPKGDIR)
 	rm -rf dist build *.egg-info *.dist-info
+	rm -rf $(VENV)
 
 .PHONY: cleanall
 cleanall: clean clean-idm-ci
 	rm -rf .tox .ruff_cache .mypy_cache
+	rm -rf ipahcc ipaserver
 
 $(OPENAPI_YAML):
 	git submodule update --init
@@ -92,10 +97,12 @@ ruff:
 .PHONY: version
 version:
 	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' \
-		$(srcdir)/ipahcc/hccplatform.py \
-		$(srcdir)/ipahcc_auto_enrollment.py
+		$(srcdir)/src/ipahcc/hccplatform.py \
+		$(srcdir)/src/ipahcc_auto_enrollment.py
 	sed -i 's/^version\ =\ ".*/version = "$(VERSION)"/g' \
 		$(srcdir)/pyproject.toml
+	sed -i 's/^version\ =\ .*/version = $(VERSION)/g' \
+		$(srcdir)/setup.cfg
 
 .PHONY: rpkg
 rpkg: $(OPENAPI_YAML)
@@ -123,12 +130,27 @@ run-idm-ci:
 rehash:
 	openssl rehash install/server/cacerts
 
+$(VENV):
+	$(PYTHON) -m venv --system-site-packages $(VENV)
+	$(VENV)/bin/python -m pip install --editable .
+
+.PHONY: stubgen
+stubgen:
+	stubgen src/ipaserver/plugins/ -o stubs/ipaserver/plugins/
+	stubgen src/ipaserver/install/plugins/ -o stubs/ipaserver/install/plugins/
+
+.PHONY: install_python
+install_python:
+	@# $(PYTHON) -m pip install -I $(srcdir) --root $(DEST) --prefix $(PREFIX) --no-deps --no-index --no-warn-script-location
+	$(PYTHON) setup.py install -O1 --root $(DEST) --prefix $(PREFIX)
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc/hccplatform.py
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py
+	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py
+
 .PHONY: install_client
 install_client:
 	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
-	$(CP_PD) $(srcdir)/ipahcc_auto_enrollment.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
+	$(CP_PD) $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
 	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
 
 	$(MKDIR_P) $(DEST)$(UNITDIR)
@@ -138,19 +160,10 @@ install_client:
 
 .PHONY: install_server_plugin
 install_server_plugin:
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc
-	$(CP_PD) $(srcdir)/ipahcc/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc/hccplatform.py
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa
 	$(CP_CONFIG) $(srcdir)/install/server/ipa/hcc.conf $(DEST)$(SYSCONFDIR)/ipa/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa/hcc
 
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/server
-	$(CP_PD) $(srcdir)/ipahcc/server/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/server/
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/server/schema
-	$(CP_PD) $(srcdir)/ipahcc/server/schema/*.json $(DEST)$(PYTHON_SITELIB)/ipahcc/server/schema/
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/sign
-	$(CP_PD) $(srcdir)/ipahcc/sign/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/sign/
 	$(MKDIR_P) $(DEST)$(SBINDIR)
 	$(CP_PD) $(srcdir)/install/server/ipa-hcc $(DEST)$(SBINDIR)/
 	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(SBINDIR)/ipa-hcc
@@ -169,10 +182,6 @@ install_server_plugin:
 	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-dbus
 	$(MKDIR_P) $(DEST)$(MANDIR)/man1
 	$(CP_PD) $(srcdir)/install/server/man/*.1 $(DEST)$(MANDIR)/man1/
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipaserver/install/plugins
-	$(CP_PD) $(srcdir)/ipaserver/install/plugins/update_hcc.py $(DEST)$(PYTHON_SITELIB)/ipaserver/install/plugins/
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipaserver/plugins
-	$(CP_PD) $(srcdir)/ipaserver/plugins/hcc*.py $(DEST)$(PYTHON_SITELIB)/ipaserver/plugins/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates/
 	$(CP_PD) $(srcdir)/install/server/updates/85-hcc.update $(DEST)$(DATADIR)/ipa/updates/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/schema.d
@@ -184,14 +193,10 @@ install_server_plugin:
 
 .PHONY: install_registration_service
 install_registration_service:
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/registration
-	$(CP_PD) $(srcdir)/ipahcc/registration/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/registration/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc
 	$(CP_PD) $(srcdir)/install/registration/wsgi/hcc_registration_service.py $(DEST)$(DATADIR)/ipa-hcc/
 	$(MKDIR_P) $(DEST)$(LOCALSTATEDIR)/cache/ipa-hcc
 	$(MKDIR_P) $(DEST)$(SHAREDSTATEDIR)/ipa/gssproxy
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipaserver/install/plugins
-	$(CP_PD) $(srcdir)/ipaserver/install/plugins/update_hcc_enrollment_service.py $(DEST)$(PYTHON_SITELIB)/ipaserver/install/plugins/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates
 	$(CP_PD) $(srcdir)/install/registration/updates/86-hcc-registration-service.update $(DEST)$(DATADIR)/ipa/updates/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/httpd/conf.d
@@ -201,8 +206,6 @@ install_registration_service:
 
 .PHONY: install_mockapi
 install_mockapi:
-	$(MKDIR_P) $(DEST)$(PYTHON_SITELIB)/ipahcc/mockapi
-	$(CP_PD) $(srcdir)/ipahcc/mockapi/*.py $(DEST)$(PYTHON_SITELIB)/ipahcc/mockapi/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc
 	$(CP_PD) $(srcdir)/install/mockapi/wsgi/hcc_mockapi.py $(DEST)$(DATADIR)/ipa-hcc/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/httpd/conf.d
@@ -212,4 +215,4 @@ install_mockapi:
 install_server: install_server_plugin install_registration_service
 
 .PHONY: install
-install: install_client install_server
+install: install_python install_client install_server

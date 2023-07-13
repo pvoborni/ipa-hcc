@@ -11,7 +11,7 @@ BASEDIR = pathlib.Path(__file__).absolute().parent.parent
 # git submodule.
 OPENAPI_YAML = BASEDIR / "api" / "public.openapi.yaml"
 
-sys.path.append(str(BASEDIR))
+sys.path.append(str(BASEDIR / "src"))
 
 from ipahcc.server.schema import (  # noqa: E402
     DRAFT_04_URI,

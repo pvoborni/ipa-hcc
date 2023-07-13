@@ -14,7 +14,6 @@ license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.6"
 dependencies = [
     "requests",
-    "coverage[toml]",
     "dbus-python",
     "pygobject",
     # Fedora dev (ipaclient is taken from global env)
@@ -31,11 +30,13 @@ dependencies = [
 ]
 
 [tool.setuptools]
+package-dir = {"" = "src"}
 packages = [
     "ipahcc",
     "ipahcc.mockapi",
     "ipahcc.registration",
     "ipahcc.server",
+    "ipahcc.server.schema",
     "ipahcc.sign",
     "ipaserver.install.plugins",
     "ipaserver.plugins",
@@ -43,6 +44,10 @@ packages = [
 py-modules = [
     "ipahcc_auto_enrollment",
 ]
+
+[tool.setuptools.package-data]
+"ipahcc" = ["py.typed"]
+"ipahcc.server" = ["schema/*.json"]
 
 [tool.black]
 line-length = 78
@@ -62,9 +67,9 @@ source = [
 
 [tool.coverage.paths]
 source = [
-   "ipahcc_auto_enrollment.py",
-   "ipahcc/",
-   "ipaserver/",
+   "src/ipahcc_auto_enrollment.py",
+   "src/ipahcc/",
+   "src/ipaserver/",
    "*.tox/*/lib*/python*/site-packages/ipahcc_auto_enrollment.py",
    "*.tox/*/lib*/python*/site-packages/ipahcc",
    "*.tox/*/lib*/python*/site-packages/ipaserver",
@@ -124,11 +129,16 @@ extend-exclude = ["api/*.py"]
 # don't resort auto-generated stub files
 "stubs/*" = ["I"]
 # allow print in CLI scripts
-"ipahcc/server/dbus_cli.py" = ["T20"]
-"ipahcc_auto_enrollment.py" = ["T20"]
+"src/ipahcc/server/dbus_cli.py" = ["T20"]
+"src/ipahcc_auto_enrollment.py" = ["T20"]
 
 [tool.ruff.isort]
-known-first-party = ["conftest"]
+known-first-party = [
+    "conftest",
+    "ipahcc",
+    "ipahcc_auto_enrollment",
+    "ipaserver.plugins.hccserverroles",
+]
 # forced-separate = [
 #     "ipaclient", "ipalib", "ipapython", "ipaplatform", "ipaserver",
 # ]

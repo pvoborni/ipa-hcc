@@ -4,7 +4,7 @@ include Makefile
 include ipa-hcc.spec.rpkg ipa-hcc.rpmlintrc
 include install.sh
 
-include ipahcc/server/schema/*.json
+include src/ipahcc/server/schema/*.json
 
 global-exclude *.pyc
 
@@ -18,3 +18,4 @@ graft install
 
 prune idm-ci
 exclude .gitlab*
+exclude contrib/
