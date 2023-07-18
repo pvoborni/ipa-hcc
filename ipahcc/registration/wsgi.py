@@ -87,15 +87,14 @@ class Application(JSONWSGIApp):
         return org_ids[0], domain_ids[0]
 
     def _load_pub_jwk(self):
-        """Get JWKs from LDAP"""
-        # TODO: implement LDAP interface
-        keyfile = os.path.join(
-            hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-jwk.key"
-        )
-        with open(keyfile, "r", encoding="utf-8") as f:
-            raw = f.read()
-        priv_key = sign.load_key(raw)
-        pub_key = sign.get_public_key(priv_key)
+        """Get JWKs from LDAP
+
+        TODO: implement LDAP interface
+        At the moment the function loads the public key from the local file
+        system.
+        """
+        with open(hccplatform.MOCKAPI_PUB_JWK, "r", encoding="utf-8") as f:
+            pub_key = sign.load_key(f.read())
         return pub_key
 
     @property

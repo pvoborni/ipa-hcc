@@ -35,26 +35,24 @@ class Application(JSONWSGIApp):
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
-        self.priv_key, self.pub_key = self._load_jwk()
+        self.priv_key, self.raw_pub_key = self._load_jwk()
 
     def _load_jwk(self) -> typing.Tuple[sign.JWKDict, str]:
-        keyfile = os.path.join(
-            hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-jwk.key"
-        )
-        if not os.path.isfile(keyfile):
-            logger.warning("Generating mockapi JWK %s", keyfile)
+        if not os.path.isfile(hccplatform.MOCKAPI_PRIV_JWK):
+            logger.warning("Generating mockapi JWK %s", hccplatform.MOCKAPI_PRIV_JWK)
             priv_key = sign.generate_private_key()
-            priv_str = priv_key.export_private()
-            with open(keyfile, "w", encoding="utf-8") as f:
-                f.write(priv_str)
+            with open(hccplatform.MOCKAPI_PRIV_JWK, "w", encoding="utf-8") as f:
+                f.write(priv_key.export_private())
+            with open(hccplatform.MOCKAPI_PUB_JWK, "w", encoding="utf-8") as f:
+                f.write(priv_key.export_public())
 
-        logger.info("Loading mockapi JWK from %s", keyfile)
-        with open(keyfile, "r", encoding="utf-8") as f:
-            raw = f.read()
+        logger.info("Loading mockapi JWK from %s", hccplatform.MOCKAPI_PRIV_JWK)
+        with open(hccplatform.MOCKAPI_PRIV_JWK, "r", encoding="utf-8") as f:
+            priv_key = sign.load_key(f.read())
+        with open(hccplatform.MOCKAPI_PUB_JWK, "r", encoding="utf-8") as f:
+            raw_pub_key = f.read()
 
-        priv_key = sign.load_key(raw)
-        pub_key = sign.get_public_key(priv_key).export_public()
-        return priv_key, pub_key
+        return priv_key, raw_pub_key
 
     def get_access_token(self) -> str:  # pragma: no cover
         """Get a bearer access token from an offline token
@@ -288,7 +286,7 @@ class Application(JSONWSGIApp):
         body["domain_id"] = domain_id
         body.setdefault("auto_enrollment_enabled", True)
         body["signing_keys"] = {
-            "keys": [self.pub_key],
+            "keys": [self.raw_pub_key],
             "revoked_kids": ["bad key id"],
         }
         return body

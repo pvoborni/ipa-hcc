@@ -138,7 +138,7 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
         self.assert_response(200, status_code, status_msg, headers, response)
         expected = copy.deepcopy(DOMAIN_RESULT)
         expected["signing_keys"] = {
-            "keys": [self.app.pub_key],
+            "keys": [self.app.raw_pub_key],
             "revoked_kids": ["bad key id"],
         }
         self.assertEqual(response, expected)
@@ -152,7 +152,7 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
         self.assert_response(200, status_code, status_msg, headers, response)
         expected = copy.deepcopy(DOMAIN_RESULT)
         expected["signing_keys"] = {
-            "keys": [self.app.pub_key],
+            "keys": [self.app.raw_pub_key],
             "revoked_kids": ["bad key id"],
         }
         self.assertEqual(response, expected)

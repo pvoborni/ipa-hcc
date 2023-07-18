@@ -9,6 +9,7 @@ __all__ = ("is_ipa_configured",)
 
 import configparser
 import json
+import os
 from typing import Optional
 
 from ipalib.facts import is_ipa_configured
@@ -66,7 +67,14 @@ HCC_CONFIG = "/etc/ipa/hcc.conf"
 
 HCC_DOMAIN_TYPE = "rhel-idm"  # noqa: S105
 
+# for testing
 TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
+MOCKAPI_PRIV_JWK = os.path.join(
+    HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-priv-jwk.json"
+)
+MOCKAPI_PUB_JWK = os.path.join(
+    HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-pub-jwk.json"
+)
 
 
 class _HCCConfig:
