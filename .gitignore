@@ -21,7 +21,8 @@ __pycache__
 /contrib/1minutetip/artifacts/
 
 # idm-ci te
-/idm-ci/secrets
+/idm-ci/secrets*
+!/idm-ci/secrets*.example
 /config/
 /credentials/
 /logs/
