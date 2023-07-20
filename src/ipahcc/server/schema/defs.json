@@ -222,6 +222,48 @@
       "maxLength": 253,
       "minLength": 3
     },
+    "HostConfIpa": {
+      "title": "Root Type for ResponseIpaObject",
+      "description": "Options for ipa domains",
+      "type": "object",
+      "required": [
+        "cabundle",
+        "enrollment_servers",
+        "realm_name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cabundle": {
+          "$ref": "#/$defs/CaCertBundle"
+        },
+        "enrollment_servers": {
+          "description": "List of auto-enrollment enabled servers for this domain.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HostConfIpaServer"
+          }
+        },
+        "realm_name": {
+          "$ref": "#/$defs/RealmName"
+        }
+      }
+    },
+    "HostConfIpaServer": {
+      "description": "Auto-enrollment enabled server for this domain.",
+      "type": "object",
+      "required": [
+        "fqdn"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fqdn": {
+          "$ref": "#/$defs/Fqdn"
+        },
+        "location": {
+          "$ref": "#/$defs/LocationName"
+        }
+      }
+    },
     "HostId": {
       "title": "host id",
       "description": "A Host-Based Inventory ID of a host.",

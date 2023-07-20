@@ -26,40 +26,7 @@
       "$ref": "defs.json#/$defs/DomainType"
     },
     "rhel-idm": {
-      "type": "object",
-      "required": [
-        "cabundle",
-        "enrollment_servers",
-        "realm_name"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "cabundle": {
-          "$ref": "defs.json#/$defs/CaCertBundle"
-        },
-        "enrollment_servers": {
-          "description": "List of auto-enrollment enabled servers for this domain.",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "fqdn"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "fqdn": {
-                "$ref": "defs.json#/$defs/Fqdn"
-              },
-              "location": {
-                "$ref": "defs.json#/$defs/LocationName"
-              }
-            }
-          }
-        },
-        "realm_name": {
-          "$ref": "defs.json#/$defs/RealmName"
-        }
-      }
+      "$ref": "defs.json#/$defs/HostConfIpa"
     },
     "token": {
       "$ref": "defs.json#/$defs/HostToken"
