@@ -10,7 +10,8 @@
     - name: Run ipa-hcc register
       command: "timeout 30 ipa-hcc register --unattended {{ hmsidm_config.domain_id }} {{ hmsidm_config.domain_token }}"
       when:
-        hmsidm_config.rhc_env in ['prod', 'stage']
+        - hmsidm_config.rhc_env in ['prod', 'stage']
+        - meta_role == 'master'
 
     - name: kinit as IPA admin
       shell: |
@@ -42,3 +43,6 @@
         - result.rc != 0
         - '"no modifications to be performed" not in result.stderr'
       when: meta_role == 'replica'
+
+    - name: Enable mkhomedir on servers
+      command: "authselect select sssd with-sudo with-mkhomedir"

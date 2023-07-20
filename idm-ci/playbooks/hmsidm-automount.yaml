@@ -1,0 +1,105 @@
+---
+- hosts: all:!ad
+  become: true
+  become_method: sudo
+  gather_facts: false
+  tasks:
+    - name: Create /home/ipausers
+      file:
+        state: directory
+        path: /home/ipausers
+        owner: root
+        group: root
+        mode: '0755'
+        seuser: system_u
+        serole: object_r
+        setype: home_root_t
+        selevel: _default
+
+- hosts: ipaserver
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Configure NFS and automount on primary IPA server
+      when: meta_role == 'master'
+      block:
+      - name: Install NFS packages
+        yum:
+          name:
+            - nfs-utils
+            - sssd-nfs-idmap
+          state: latest
+
+      - name: kinit as IPA admin
+        shell: |
+          echo Secret123 | kinit admin
+
+      - name: Change default homedir base to /home/ipausers, update shell, and auth
+        command: "ipa config-mod --homedirectory=/home/ipausers --defaultshell=/bin/bash --user-auth-type=password --user-auth-type=otp"
+        register: result
+        failed_when:
+          - result.rc != 0
+          - '"already exists" not in result.stderr'
+
+      - name: Add nfs service account
+        command: "ipa service-add nfs/{{ meta_fqdn }}"
+        register: result
+        failed_when:
+          - result.rc != 0
+          - '"already exists" not in result.stderr'
+
+      - name: Add auto.home-ipausers map
+        command: "ipa automountmap-add default auto.home-ipausers"
+        register: result
+        failed_when:
+          - result.rc != 0
+          - '"already exists" not in result.stderr'
+
+      - name: Add automountkey for auto.home-ipausers
+        command: "ipa automountkey-add default --key '*' --info '-fstype=nfs4,rw,sec=krb5,soft,rsize=8192,wsize=8192 {{ meta_fqdn }}:/home/ipausers/&' auto.home-ipausers"
+        register: result
+        failed_when:
+          - result.rc != 0
+          - '"already exists" not in result.stderr'
+
+      - name: Add auto.home-ipausers map to auto.master
+        command: "ipa automountkey-add default --key '/home/ipausers' --info auto.home-ipausers auto.master"
+        register: result
+        failed_when:
+          - result.rc != 0
+          - '"already exists" not in result.stderr'
+
+      - name: Read /etc/krb5.keytab
+        shell: "echo -e 'rkt /etc/krb5.keytab\nlist\nquit' | ktutil"
+        register: keytab
+
+      - name: Get keytab for NFS account
+        command: "ipa-getkeytab -p nfs/{{ meta_fqdn }} -k /etc/krb5.keytab"
+        when: "('nfs/' + meta_fqdn) not in keytab.stdout"
+
+      - name: Add NFS export
+        lineinfile:
+          path: /etc/exports
+          regexp: '^/home'
+          line: '/home *(rw,sec=sys:krb5:krb5i:krb5p)'
+
+      - name: Start NFS server
+        systemd:
+          name: nfs-server.service
+          state: reloaded
+          enabled: true
+
+- hosts: ipaclient
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Enable use_nfs_home_dirs SELinux boolean
+      command: "setsebool -P use_nfs_home_dirs on"
+
+    # - name: ipa-client-automount
+    #   command: "ipa-client-automount -U"
+    #   register: result
+    #   failed_when:
+    #     - result.rc != 0
+    #     - '"already configured" not in result.stderr'
+    #   when: meta_role != 'master'
