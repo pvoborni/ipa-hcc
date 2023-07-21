@@ -21,7 +21,7 @@ default: objectClass: automemberregexrule
 default: objectClass: top
 default: autoMemberTargetGroup: cn=hcc-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
 default: cn: hcc-enrollment
-default: autoMemberExclusiveRegex: memberof=cn=ipaserver,cn=hostgroups,cn=accounts,.*
+default: autoMemberExclusiveRegex: memberof=cn=ipaservers,cn=hostgroups,cn=accounts,.*
 default: autoMemberInclusiveRegex: hccsubscriptionid=.*
 
 # certmap rule for RHSM certificate
