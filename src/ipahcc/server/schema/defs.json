@@ -69,6 +69,7 @@
       "type": "object",
       "required": [
         "ca_certs",
+        "locations",
         "realm_domains",
         "realm_name",
         "servers"
@@ -93,20 +94,9 @@
           "description": "List of allowed locations",
           "type": "array",
           "items": {
-            "type": "object",
-            "required": [
-              "name"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "$ref": "#/$defs/LocationName"
-              },
-              "description": {
-                "type": "string"
-              }
-            }
-          }
+            "$ref": "#/$defs/Location"
+          },
+          "minItems": 0
         },
         "realm_domains": {
           "description": "List of realm associated to the IPA domain.",
@@ -276,6 +266,23 @@
       "title": "Host Token",
       "description": "A serialized JWS token or JWT to authenticate a host registration request.",
       "type": "string"
+    },
+    "Location": {
+      "title": "Location record",
+      "description": "RHEL IdM server location",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/LocationName"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
     },
     "LocationName": {
       "title": "Location identifier (IPA location, AD site)",
