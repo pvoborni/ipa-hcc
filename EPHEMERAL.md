@@ -49,7 +49,7 @@ cd ipa-hcc
 
 Copy `idm-ci-secrets` from `idm-domains-backend` to local directory
 `idm-ci/secrets`. The variables `RHC_KEY` and `RH_API_TOKEN` are currently
-not used in ephemeral environment. The values for `HMSIDM_BACKEND`,
+not used in ephemeral environment. The values for `IDMSVC_BACKEND`,
 `EPHEMERAL_USERNAME`, and `EPHEMERAL_PASSWORD` are retrieved from
 ephemeral cluster configuration with the `oc` command. Every ephemeral
 environment has a different value for backend hostname and password.
@@ -79,7 +79,7 @@ te --phase pkg idm-ci/metadata/hmsidm-ephemeral.yaml
 
 ### Manual configuring /etc/ipa/hcc.conf
 
-The `idm_api_url` and `dev_password` is different for each ephemeral
+The `idmsvc_api_url` and `dev_password` is different for each ephemeral
 environment. The other values usually don't change or are ignored. The
 `dev_org_id` and `dev_cert_cn` settings enable `X-Rh-Fake-Identity`
 development header. The `dev_username` and `dev_password` are required to
@@ -91,7 +91,7 @@ won't even reach the backend.
 token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token
 inventory_api_url=https://console.invalid/api/inventory/v1
 # oc get routes -l app=hmsidm-backend -o jsonpath='{.items[0].spec.host}'
-idm_api_url=https://HMSIDM-BACKEND/api/hmsidm/v1
+idmsvc_api_url=https://HMSIDM-BACKEND/api/idmsvc/v1
 dev_org_id=12345
 dev_cert_cn=6f324116-b3d2-11ed-8a37-482ae3863d30
 dev_username=jdoe

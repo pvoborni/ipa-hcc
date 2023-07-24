@@ -75,7 +75,7 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
         with open(self.kdc_conf, encoding="utf-8") as f:
             content = f.read()
         self.assertIn(
-            f"pkinit_anchors = DIR:{hccplatform.HMSIDM_CACERTS_DIR}",
+            f"pkinit_anchors = DIR:{hccplatform.HCC_CACERTS_DIR}",
             content,
         )
         self.assertEqual(content.count("pkinit_anchors = "), 3)

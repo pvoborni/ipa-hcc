@@ -498,7 +498,7 @@ class HCCAPI:
         payload: typing.Dict[str, typing.Any],
         extra_headers=None,
     ) -> requests.Response:
-        api_url = hccplatform.IDM_API_URL.rstrip("/")
+        api_url = hccplatform.IDMSVC_API_URL.rstrip("/")
         url = "/".join((api_url,) + subpath)
         headers = {}
         headers.update(hccplatform.HTTP_HEADERS)

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema",
   "title": "Root Type for ErrorResponse",
-  "description": "General error response returned by the hmsidm API",
+  "description": "General error response returned by the idmsvc API",
   "type": "object",
   "required": [
     "errors"

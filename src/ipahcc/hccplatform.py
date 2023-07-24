@@ -44,7 +44,7 @@ HCC_ENROLLMENT_AGENT_KRB5CCNAME = "/var/cache/ipa-hcc/krb5ccname"
 
 HCC_ENROLLMENT_ROLE = "HCC Enrollment Administrators"
 
-HMSIDM_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"
+HCC_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"
 
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
 RHSM_KEY = "/etc/pki/consumer/key.pem"
@@ -84,7 +84,7 @@ class _HCCConfig:
             "/protocol/openid-connect/token"
         ),
         "inventory_api_url": "https://console.redhat.com/api/inventory/v1",
-        "idm_api_url": "https://console.redhat.com/api/idm/v1",
+        "idmsvc_api_url": "https://console.redhat.com/api/idmsvc/v1",
     }
 
     _section = "hcc"
@@ -98,9 +98,9 @@ class _HCCConfig:
         self._cp.read(HCC_CONFIG)
 
     @property
-    def idm_api_url(self) -> str:
+    def idmsvc_api_url(self) -> str:
         """IDM API url with cert authentication"""
-        return self._cp.get(self._section, "idm_api_url")
+        return self._cp.get(self._section, "idmsvc_api_url")
 
     @property
     def token_url(self) -> str:
@@ -135,7 +135,7 @@ class _HCCConfig:
 
 _hccconfig = _HCCConfig()
 
-IDM_API_URL = _hccconfig.idm_api_url
+IDMSVC_API_URL = _hccconfig.idmsvc_api_url
 TOKEN_URL = _hccconfig.token_url
 INVENTORY_API_URL = _hccconfig.inventory_api_url
 DEV_ORG_ID = _hccconfig.dev_org_id

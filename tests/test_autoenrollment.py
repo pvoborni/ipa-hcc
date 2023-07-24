@@ -261,7 +261,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             req = urlopen.call_args[0][0]
             self.assertEqual(
                 req.get_full_url(),
-                "https://{}/api/idm/v1/host-conf/{}/{}".format(
+                "https://{}/api/idmsvc/v1/host-conf/{}/{}".format(
                     conftest.SERVER_FQDN,
                     conftest.CLIENT_INVENTORY_ID,
                     conftest.CLIENT_FQDN,

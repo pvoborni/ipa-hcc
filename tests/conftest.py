@@ -46,7 +46,7 @@ KDC_CONF = os.path.join(TESTDATA, "kdc.conf")
 DUMMY_TOKEN = "dummy token"  # noqa: S105
 # patch
 paths.IPA_CA_CRT = IPA_CA_CRT
-hccplatform.HMSIDM_CACERTS_DIR = KDC_CA_DIR
+hccplatform.HCC_CACERTS_DIR = KDC_CA_DIR
 
 with open(RHSM_CERT, encoding="utf-8") as f:
     RHSM_CERT_DATA = f.read()
@@ -149,8 +149,8 @@ class IPABaseTests(unittest.TestCase):
             RHSM_CERT=RHSM_CERT,
             RHSM_KEY=RHSM_KEY,
             INSIGHTS_HOST_DETAILS=HOST_DETAILS,
-            HMSIDM_CACERTS_DIR=KDC_CA_DIR,
-            IDM_API_URL="http://invalid.test",
+            HCC_CACERTS_DIR=KDC_CA_DIR,
+            IDMSVC_API_URL="http://invalid.test",
             TOKEN_URL="http://invalid.test",  # noqa: S106
             INVENTORY_API_URL="http://invalid.test",
             HCC_ENROLLMENT_AGENT_KEYTAB=NO_FILE,

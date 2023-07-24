@@ -531,7 +531,7 @@ class AutoEnrollment:
             if value is not None:
                 body[key] = value
 
-        url = "https://{api_host}/api/idm/v1/host-conf/{inventory_id}/{hostname}".format(
+        url = "https://{api_host}/api/idmsvc/v1/host-conf/{inventory_id}/{hostname}".format(
             api_host=self.args.hcc_api_host,
             inventory_id=self.inventory_id,
             hostname=self.args.hostname,

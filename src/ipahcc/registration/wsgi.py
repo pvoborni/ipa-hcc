@@ -40,7 +40,7 @@ class Application(JSONWSGIApp):
         self._org_id: typing.Optional[str] = None
         self._domain_id: typing.Optional[str] = None
         # cached PEM bundle
-        self._kdc_cabundle = read_cert_dir(hccplatform.HMSIDM_CACERTS_DIR)
+        self._kdc_cabundle = read_cert_dir(hccplatform.HCC_CACERTS_DIR)
 
     def kinit_gssproxy(self) -> gssapi.Credentials:
         service = hccplatform.HCC_ENROLLMENT_AGENT
