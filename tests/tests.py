@@ -36,11 +36,10 @@ class IPAServerTests(conftest.IPABaseTests):
 
 
 class IPAHCCServerTests(conftest.IPABaseTests):
-    def test_ipa_hcc_dbus_help(self):
-        from ipahcc.server import dbus_cli, dbus_service
+    def test_ipa_hcc_cli_help(self):
+        from ipahcc.server import cli
 
-        self.assert_cli_run(dbus_service.main, "--help")
-        self.assert_cli_run(dbus_cli.main, "--help")
+        self.assert_cli_run(cli.main, "--help")
 
 
 class TestJSONSchema(conftest.IPABaseTests):

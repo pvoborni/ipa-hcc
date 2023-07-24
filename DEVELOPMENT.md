@@ -222,9 +222,9 @@ dev_username=jdoe
 dev_password=PASSWORD
 ```
 
-Then restart the D-BUS service and Apache HTTPd:
+Then restart Apache HTTPd:
 ```sh
-systemctl restart ipa-hcc-dbus.service httpd.service
+systemctl restart httpd.service
 ```
 
 ## podman-compose on a VM

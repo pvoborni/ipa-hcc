@@ -37,14 +37,6 @@ default: ipaCertMapMatchRule: <ISSUER>.*,CN=Red Hat Candlepin Authority,OU=Red H
 default: ipaEnabledFlag: TRUE
 
 # service definitions for ipactl and "HCC Enrollment server" role
-dn: cn=IPAHCCDBus,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
-default: objectClass: ipaConfigObject
-default: objectClass: nsContainer
-default: objectClass: top
-default: cn: IPAHCCDBus
-default: ipaConfigString: enabledService
-default: ipaConfigString: startOrder 45
-
 dn: cn=IPAHCCUpdate,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
 default: objectClass: ipaConfigObject
 default: objectClass: nsContainer

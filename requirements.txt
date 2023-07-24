@@ -1,6 +1,4 @@
 requests
-dbus-python
-pygobject
 # Fedora dev (ipaclient is taken from global env)
 jsonschema == 4.10; python_version >= '3.10'
 jwcrypto == 0.9.1; python_version >= '3.10'

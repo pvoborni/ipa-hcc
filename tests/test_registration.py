@@ -6,7 +6,6 @@ import gssapi
 import conftest
 from ipahcc import hccplatform, sign
 from ipahcc.registration import wsgi
-from ipahcc.server import dbus_client
 
 PRIV_KEY = sign.generate_private_key()
 PUB_KEY = sign.get_public_key(PRIV_KEY)
@@ -36,10 +35,6 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
         self.m_gss_credentials = p.start()
         self.addCleanup(p.stop)
 
-        p = mock.patch.object(dbus_client, "_dbus_getmethod")
-        self.m_dbus_method = p.start()
-        self.addCleanup(p.stop)
-
     def test_ipaapi(self):
         app = self.app
         api = self.m_api
@@ -56,7 +51,7 @@ class TestRegistrationWSGI(conftest.IPABaseTests):
         api.Backend.rpcclient.disconnect.assert_called_once()
 
     def test_register(self):
-        self.m_dbus_method.return_value = mock.Mock(
+        self.m_api.return_value = mock.Mock(
             return_value=(
                 "rid",
                 200,

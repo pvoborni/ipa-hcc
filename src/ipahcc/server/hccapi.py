@@ -98,24 +98,6 @@ class APIResult(typing.NamedTuple):
         d["body"] = self.json()
         return d
 
-    def to_dbus(self) -> "APIResult":
-        """Convert to D-Bus format"""
-        headers = self.headers or {}
-        url = self.url or ""
-        body = self.body
-        if isinstance(body, dict):
-            body = json.dumps(body, sort_keys=True)
-        return type(self)(
-            self.id,
-            self.status_code,
-            self.reason,
-            url,
-            headers,
-            body,
-            self.exit_code,
-            self.exit_message,
-        )
-
     def json(self) -> dict:
         if isinstance(self.body, dict):
             return self.body
@@ -133,7 +115,7 @@ def _get_one(dct: dict, key: str, default=_missing) -> typing.Any:
 
 
 class APIError(Exception):
-    """HCC D-Bus API error"""
+    """HCC API error"""
 
     def __init__(self, apiresult: APIResult):
         super().__init__()
@@ -146,9 +128,6 @@ class APIError(Exception):
         return f"{clsname}: {self.result}"
 
     __repr__ = __str__
-
-    def to_dbus(self) -> APIResult:
-        return self.result.to_dbus()
 
     @classmethod
     def from_response(

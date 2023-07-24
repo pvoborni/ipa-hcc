@@ -1,16 +1,18 @@
 import argparse
 import logging
+import os
 import pprint
 import sys
 import typing
 import uuid
 
+import ipalib
+from ipaplatform.paths import paths
 from ipapython import admintool
 
 from ipahcc import hccplatform
 
-from . import dbus_client
-from .hccapi import APIError, APIResult
+from . import hccapi
 from .util import prompt_yesno
 
 logger = logging.getLogger(__name__)
@@ -48,10 +50,18 @@ parser.add_argument(
     action="version",
     version=f"ipa-hcc {hccplatform.VERSION} (IPA {hccplatform.IPA_VERSION})",
 )
+parser.add_argument(
+    "--timeout",
+    help="Timeout for HTTP and LDAP requests",
+    dest="timeout",
+    default=hccapi.DEFAULT_TIMEOUT,
+    type=int,
+)
+
 subparsers = parser.add_subparsers(dest="action")
 
 
-def confirm_register(result: APIResult) -> bool:
+def confirm_register(result: hccapi.APIResult) -> bool:
     print("Domain information:")
     j = result.body
     if typing.TYPE_CHECKING:
@@ -64,7 +74,7 @@ def confirm_register(result: APIResult) -> bool:
     return prompt_yesno("Proceed with registration?", default=False)
 
 
-def register_callback(result: APIResult) -> None:
+def register_callback(result: hccapi.APIResult) -> None:
     print(result.exit_message)
 
 
@@ -82,7 +92,7 @@ parser_register.add_argument(
 )
 
 
-def update_callback(result: APIResult) -> None:
+def update_callback(result: hccapi.APIResult) -> None:
     print(result.exit_message)
 
 
@@ -93,8 +103,8 @@ parser_update.set_defaults(callback=update_callback)
 parser_update.add_argument("--update-server-only", action="store_true")
 
 
-def status_callback(result: APIResult) -> None:
-    j = result.body
+def status_callback(result: hccapi.APIResult) -> None:
+    j = result.json()
     if typing.TYPE_CHECKING:
         assert isinstance(j, dict)
     nr = "<not registered>"
@@ -130,37 +140,41 @@ def main(args=None):
     if not hccplatform.is_ipa_configured():
         print("IPA is not configured on this system.", file=sys.stderr)
         parser.exit(admintool.SERVER_NOT_CONFIGURED)
+    if os.geteuid() != 0:
+        print("Must be run as root", file=sys.stderr)
+        parser.exit(3)
 
-    try:
-        if args.action == "register":
-            do_it = True
-            if not args.unattended and sys.stdin.isatty():
-                # print summary and ask for confirmation
-                result = dbus_client.status_check()
-                do_it = confirm_register(result)
-            if not do_it:
-                parser.exit(status=0, message="Registration cancelled\n")
-            result = dbus_client.register_domain(args.domain_id, args.token)
-        elif args.action == "update":
-            result = dbus_client.update_domain(args.update_server_only)
-        elif args.action == "status":
-            result = dbus_client.status_check()
-        else:  # pragma: no cover
-            raise ValueError(args.action)
-    except dbus_client.DBusError as e:
-        print(f"D-Bus error: {e}", file=sys.stderr)
-        parser.exit(255)
-    except APIError as e:
-        logger.error("API error: %s", e)
-        print(e.result.exit_message, file=sys.stderr)
-        parser.exit(e.result.exit_code)
-    else:
-        logger.debug("APIResult: %s", pprint.pformat(result.asdict()))
-        args.callback(result)
-        if result.exit_code == 0:
-            parser.exit(0)
+    ipalib.api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
+    ipalib.api.finalize()
+
+    with hccapi.HCCAPI(api=ipalib.api, timeout=args.timeout) as api:
+        try:
+            if args.action == "register":
+                do_it = True
+                if not args.unattended and sys.stdin.isatty():
+                    # print summary and ask for confirmation
+                    _, result = api.status_check()
+                    do_it = confirm_register(result)
+                if not do_it:
+                    parser.exit(status=0, message="Registration cancelled\n")
+                _, result = api.register_domain(args.domain_id, args.token)
+            elif args.action == "update":
+                _, result = api.update_domain(args.update_server_only)
+            elif args.action == "status":
+                _, result = api.status_check()
+            else:  # pragma: no cover
+                raise ValueError(args.action)
+        except hccapi.APIError as e:
+            logger.error("API error: %s", e)
+            print(e.result.exit_message, file=sys.stderr)
+            parser.exit(e.result.exit_code)
         else:
-            parser.exit(result.exit_code, result.exit_message + "\n")
+            logger.debug("APIResult: %s", pprint.pformat(result.asdict()))
+            args.callback(result)
+            if result.exit_code == 0:
+                parser.exit(0)
+            else:
+                parser.exit(result.exit_code, result.exit_message + "\n")
 
 
 if __name__ == "__main__":

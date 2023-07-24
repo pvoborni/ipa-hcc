@@ -14,8 +14,6 @@ license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.6"
 dependencies = [
     "requests",
-    "dbus-python",
-    "pygobject",
     # Fedora dev (ipaclient is taken from global env)
     "jsonschema == 4.10; python_version >= '3.10'",
     "jwcrypto == 0.9.1; python_version >= '3.10'",
@@ -93,8 +91,6 @@ explicit_package_bases = true
 [[tool.mypy.overrides]]
 module = [
     'augeas.*',
-    'dbus.*',
-    'gi.*',
     'jwcrypto.*',
 ]
 ignore_missing_imports = true
@@ -129,7 +125,7 @@ extend-exclude = ["api/*.py"]
 # don't resort auto-generated stub files
 "stubs/*" = ["I"]
 # allow print in CLI scripts
-"src/ipahcc/server/dbus_cli.py" = ["T20"]
+"src/ipahcc/server/cli.py" = ["T20"]
 "src/ipahcc_auto_enrollment.py" = ["T20"]
 
 [tool.ruff.isort]

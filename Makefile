@@ -58,7 +58,8 @@ clean:
 	rm -rf htmlcov
 	rm -rf .mypy_cache
 	rm -rf $(RPKGDIR)
-	rm -rf dist build *.egg-info *.dist-info
+	rm -rf dist build
+	rm -rf src/*.egg-info src/*.dist-info
 	rm -rf $(VENV)
 
 .PHONY: cleanall
@@ -172,14 +173,7 @@ install_server_plugin:
 	$(CP_PD) $(srcdir)/install/server/cacerts/* $(DEST)$(DATADIR)/ipa-hcc/cacerts/
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/server/systemd/ipa-hcc-update.* $(DEST)$(UNITDIR)/
-	$(CP_PD) $(srcdir)/install/server/systemd/ipa-hcc-dbus.service $(DEST)$(UNITDIR)/
-	$(MKDIR_P) $(DEST)$(DATADIR)/dbus-1/system.d
-	$(CP_PD) $(srcdir)/install/server/dbus-1/system.d/com.redhat.console.ipahcc.conf $(DEST)$(DATADIR)/dbus-1/system.d/
-	$(MKDIR_P) $(DEST)$(DATADIR)/dbus-1/system-services
-	$(CP_PD) $(srcdir)/install/server/dbus-1/system-services/com.redhat.console.ipahcc.service $(DEST)$(DATADIR)/dbus-1/system-services/
 	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
-	$(CP_PD) $(srcdir)/install/server/ipa-hcc-dbus $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-dbus
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-dbus
 	$(MKDIR_P) $(DEST)$(MANDIR)/man1
 	$(CP_PD) $(srcdir)/install/server/man/*.1 $(DEST)$(MANDIR)/man1/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates/

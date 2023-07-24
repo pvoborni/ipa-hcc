@@ -21,12 +21,6 @@ from ipaserver.plugins.serverrole import server_role
 
 # service definitions, used by ipactl to start systemd services and for
 # service-based server role.
-# dbus API, cn=IPAHCCDBus,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
-ipa_hcc_dbus = masters.service_definition(
-    systemd_name="ipa-hcc-dbus",
-    startorder=45,  # start after HTTPD
-    service_entry="IPAHCCDBus",
-)
 # timer service, cn=IPAHCCUpdate,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
 ipa_hcc_update = masters.service_definition(
     systemd_name="ipa-hcc-update",
@@ -34,11 +28,10 @@ ipa_hcc_update = masters.service_definition(
     service_entry="IPAHCCUpdate",
 )
 
-ipa_hcc_services = [ipa_hcc_dbus, ipa_hcc_update]
+ipa_hcc_services = [ipa_hcc_update]
 ipa_hcc_systemd_names = [s.systemd_name for s in ipa_hcc_services]
 ipa_hcc_service_entries = {s.service_entry: s for s in ipa_hcc_services}
 ipa_hcc_units = {
-    ipa_hcc_dbus.systemd_name: f"{ipa_hcc_dbus.systemd_name}.service",
     ipa_hcc_update.systemd_name: f"{ipa_hcc_update.systemd_name}.timer",
 }
 ipa_hcc_knownservices = {
@@ -67,12 +60,12 @@ hcc_enrollment_server_role = servroles.ServiceBasedRole(
 
 # HCC enrollment agent and update server attributes are server role
 # attributes with 'ipaConfigString=hccEnrollmentAgentEnabled; in
-# cn=IPAHCCDBus,cn=$FQDN.test,cn=masters,cn=ipa,cn=etc,$SUFFIX
+# cn=IPAHCCUpdate,cn=$FQDN.test,cn=masters,cn=ipa,cn=etc,$SUFFIX
 hcc_enrollment_agent_attribute = servroles.ServerAttribute(
     "hcc_enrollment_agent_server",
     "HCC enrollment agent server",
     hcc_enrollment_server_role.attr_name,
-    ipa_hcc_dbus.service_entry,
+    ipa_hcc_update.service_entry,
     "hccEnrollmentAgentEnabled",
 )
 

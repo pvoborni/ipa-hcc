@@ -1,6 +1,5 @@
 from _typeshed import Incomplete
 
-ipa_hcc_dbus: Incomplete
 ipa_hcc_update: Incomplete
 ipa_hcc_services: Incomplete
 ipa_hcc_systemd_names: Incomplete

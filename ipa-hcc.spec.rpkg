@@ -54,8 +54,6 @@ BuildRequires: python3-ipaserver >= %{ipa_version}
 %else
 BuildRequires: python3-ipaclient >= %{ipa_version}
 %endif
-BuildRequires: python3-dbus
-BuildRequires: python3-gobject-base
 BuildRequires: python3-requests
 BuildRequires: python3-systemd
 BuildRequires: python3-sssdconfig
@@ -76,12 +74,6 @@ BuildRequires: openldap-devel
 BuildRequires: openldap-compat
 BuildRequires: gcc
 BuildRequires: krb5-devel
-BuildRequires: glib2-devel
-BuildRequires: dbus-devel
-BuildRequires: dbus-daemon
-BuildRequires: gobject-introspection-devel
-BuildRequires: cairo-devel
-BuildRequires: cairo-gobject-devel
 BuildRequires: python3-pyyaml
 %endif
 
@@ -107,8 +99,6 @@ Requires(post): %{ipa_name}-server >= %{ipa_version}
 Requires: httpd
 Requires: mod_ssl
 Requires: python3-mod_wsgi
-Requires: python3-dbus
-Requires: python3-gobject-base
 Requires: python3-jsonschema
 Requires: python3-jwcrypto
 Requires: python3-requests
@@ -142,14 +132,12 @@ getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c
 # SELinux context for cache dir
 /usr/sbin/semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
 /usr/sbin/restorecon -R /var/cache/ipa-hcc || :
-# ipa-hcc-dbus.service and ipa-hcc-update.timer are started by ipactl
-%systemd_post ipa-hcc-dbus.service
+# ipa-hcc-update.timer is started by ipactl
 %systemd_post ipa-hcc-update.service
 %systemd_post ipa-hcc-update.timer
 /bin/systemctl daemon-reload
 
 %preun server
-%systemd_preun ipa-hcc-dbus.service
 %systemd_preun ipa-hcc-update.service
 %systemd_preun ipa-hcc-update.timer
 
@@ -158,7 +146,6 @@ getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c
 /usr/sbin/semanage fcontext -d '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/cacerts/d' /var/kerberos/krb5kdc/kdc.conf || :
-%systemd_postun_with_restart ipa-hcc-dbus.service
 %systemd_postun ipa-hcc-update.service
 %systemd_postun ipa-hcc-update.timer
 
@@ -232,7 +219,6 @@ rm -rf %{buildroot}/%{python_sitelib}/__pycache__
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --version
 %if %{with server}
 %{buildroot}%{_sbindir}/ipa-hcc --help >/dev/null
-%{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-dbus --help >/dev/null
 %endif
 
 %install
@@ -264,13 +250,9 @@ rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
-%attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-dbus
 %dir %{_datadir}/ipa-hcc/
 %{_datadir}/ipa-hcc/cacerts
 %{_unitdir}/ipa-hcc-update.*
-%{_unitdir}/ipa-hcc-dbus.service
-%{_datadir}/dbus-1/system.d/com.redhat.console.ipahcc.conf
-%{_datadir}/dbus-1/system-services/com.redhat.console.ipahcc.service
 %{python_sitelib}/ipahcc*.egg-info
 %{python_sitelib}/ipahcc/py.typed
 %{python_sitelib}/ipahcc/*.py

@@ -1,5 +1,4 @@
 import copy
-import json
 import textwrap
 from unittest import mock
 
@@ -10,7 +9,6 @@ from ipapython.dnsutil import DNSName
 import conftest
 from ipahcc import hccplatform
 from ipahcc.server import hccapi
-from ipahcc.server.dbus_service import IPAHCCDbus
 
 CACERT = x509.load_pem_x509_certificate(conftest.IPA_CA_DATA.encode("ascii"))
 
@@ -65,19 +63,6 @@ STATUS_CHECK_RESULT.update(
         "org_id": conftest.ORG_ID,
     }
 )
-
-
-def mkresult(dct, status_code=200, exit_code=0, exit_message="ok"):
-    return hccapi.APIResult(
-        "",
-        status_code,
-        "",
-        "",
-        {"content-type": "application/json"},
-        dct,
-        exit_code,
-        exit_message,
-    )
 
 
 class TestHCCAPICommon(conftest.IPABaseTests):
@@ -187,120 +172,7 @@ class TestHCCAPI(TestHCCAPICommon):
         self.assertIsInstance(resp, hccapi.APIResult)
 
 
-class TestIPAHCCDbus(TestHCCAPICommon):
-    def setUp(self):
-        super().setUp()
-        bus = mock.Mock()
-        bus_name = mock.Mock()
-        self.m_mainloop = mock.Mock()
-        self.dbus = IPAHCCDbus(
-            bus,
-            hccplatform.HCC_DBUS_OBJ_PATH,
-            bus_name=bus_name,
-            loop=self.m_mainloop,
-            hccapi=self.m_hccapi,
-        )
-        self.addCleanup(self.dbus.stop)
-
-    def dbus_call(self, method, *args):
-        # pylint: disable=protected-access
-        self.assertTrue(self.dbus._lq_thread.is_alive())
-        ok_cb = mock.Mock()
-        err_cb = mock.Mock()
-        args += (ok_cb, err_cb)
-        method(*args)
-        # wait for queue to process task
-        self.dbus._lq._queue.join()
-        return ok_cb, err_cb
-
-    def test_dbus_livecycle(self):
-        # pylint: disable=protected-access
-        self.assertTrue(self.dbus._lq_thread.is_alive())
-        self.dbus.stop()
-        self.assertFalse(self.dbus._lq_thread.is_alive())
-        self.assert_log_entry("Stopping lookup queue")
-        self.m_mainloop.quit.assert_called_once()
-
-    def test_register_domain(self):
-        body = DOMAIN_RESULT
-        self.m_session.request.return_value = self.mkresponse(200, body)
-        ok_cb, err_cb = self.dbus_call(
-            self.dbus.register_domain, conftest.DOMAIN_ID, "mockapi"
-        )
-
-        err_cb.assert_not_called()
-        body_str = json.dumps(body)
-        ok_cb.assert_called_once_with(
-            self.m_genrid.return_value,
-            200,
-            "OK",
-            "",
-            {
-                "content-type": "application/json",
-                "content-length": str(len(body_str)),
-            },
-            body_str,
-            0,
-            (
-                f"Successfully registered domain '{conftest.DOMAIN}' "
-                f"with Hybrid Cloud Console (id: {conftest.DOMAIN_ID})."
-            ),
-        )
-
-    def test_update_domain(self):
-        body = DOMAIN_RESULT
-        self.m_session.request.return_value = self.mkresponse(200, body)
-        ok_cb, err_cb = self.dbus_call(
-            self.dbus.update_domain,
-            False,
-        )
-
-        err_cb.assert_not_called()
-        body_str = json.dumps(body)
-        ok_cb.assert_called_once_with(
-            self.m_genrid.return_value,
-            200,
-            "OK",
-            "",
-            {
-                "content-type": "application/json",
-                "content-length": str(len(body_str)),
-            },
-            body_str,
-            0,
-            (
-                f"Successfully updated domain '{conftest.DOMAIN}' "
-                f"({conftest.DOMAIN_ID})."
-            ),
-        )
-
-    def test_status_check(self):
-        ok_cb, err_cb = self.dbus_call(
-            self.dbus.status_check,
-        )
-        expected = json.dumps(STATUS_CHECK_RESULT, sort_keys=True)
-
-        err_cb.assert_not_called()
-        ok_cb.assert_called_once_with(
-            self.m_genrid.return_value,
-            200,
-            "OK",
-            "",
-            {
-                "content-type": "application/json",
-                "content-length": str(len(expected)),
-            },
-            expected,
-            0,
-            (
-                f"IPA domain '{conftest.DOMAIN}' is registered with Hybrid Cloud "
-                f"Console (domain_id: {conftest.DOMAIN_ID}, organization: "
-                f"{conftest.ORG_ID})."
-            ),
-        )
-
-
-class TestDBUSCli(conftest.IPABaseTests):
+class TestCLI(TestHCCAPICommon):
     def setUp(self):
         super().setUp()
         p = mock.patch("ipahcc.hccplatform.is_ipa_configured")
@@ -308,28 +180,34 @@ class TestDBUSCli(conftest.IPABaseTests):
         self.addCleanup(p.stop)
         self.m_is_ipa_configured.return_value = True
 
-        p = mock.patch.multiple(
-            "ipahcc.server.dbus_client",
-            register_domain=mock.Mock(),
-            update_domain=mock.Mock(),
-        )
-        self.m_dbus_client = p.start()
+        # patch ipalib.api for cli.main()
+        p = mock.patch("ipalib.api", self.m_api)
+        p.start()
         self.addCleanup(p.stop)
 
-    def assert_dbus_cli_run(self, *args, **kwargs):
-        # pylint: disable=import-outside-toplevel
-        from ipahcc.server.dbus_cli import main
+        p = mock.patch.object(hccapi.HCCAPI, "_submit_idm_api", autospec=True)
+        self.m_submit_idm_api = p.start()
+        self.addCleanup(p.stop)
 
-        return self.assert_cli_run(main, *args, **kwargs)
+        p = mock.patch("os.geteuid")
+        self.m_geteuid = p.start()
+        self.m_geteuid.return_value = 0
+        self.addCleanup(p.stop)
+
+    def assert_cli_run(self, *args, **kwargs):
+        # pylint: disable=import-outside-toplevel
+        from ipahcc.server.cli import main
+
+        return super().assert_cli_run(main, *args, **kwargs)
 
     def test_cli_noaction(self):
-        out = self.assert_dbus_cli_run(exitcode=2)
+        out = self.assert_cli_run(exitcode=2)
         self.assertIn("usage:", out)
 
     def test_cli_not_configured(self):
         self.m_is_ipa_configured.return_value = False
 
-        out = self.assert_dbus_cli_run(
+        out = self.assert_cli_run(
             "register",
             conftest.DOMAIN_ID,
             "mockapi",
@@ -338,23 +216,26 @@ class TestDBUSCli(conftest.IPABaseTests):
         self.assertEqual(out.strip(), "IPA is not configured on this system.")
 
     def test_cli_register(self):
-        with mock.patch("ipahcc.server.dbus_client.register_domain") as m:
-            m.return_value = mkresult({"status": "ok"})
-            out = self.assert_dbus_cli_run(
-                "register", "--unattended", conftest.DOMAIN_ID, "mockapi"
-            )
-        self.assertIn("ok", out)
+        self.m_submit_idm_api.return_value = self.mkresponse(
+            200, DOMAIN_RESULT
+        )
+        out = self.assert_cli_run(
+            "register", "--unattended", conftest.DOMAIN_ID, "mockapi"
+        )
+        self.assertIn("Successfully registered domain", out)
 
     def test_cli_update(self):
-        with mock.patch("ipahcc.server.dbus_client.update_domain") as m:
-            m.return_value = mkresult({"status": "ok"})
-            out = self.assert_dbus_cli_run("update")
-        self.assertIn("ok", out)
+        self.m_submit_idm_api.return_value = self.mkresponse(
+            200, DOMAIN_RESULT
+        )
+        out = self.assert_cli_run("update")
+        self.assertIn("Successfully updated domain", out)
 
     def test_cli_status(self):
-        with mock.patch("ipahcc.server.dbus_client.status_check") as m:
-            m.return_value = mkresult(STATUS_CHECK_RESULT)
-            out = self.assert_dbus_cli_run("status")
+        self.m_submit_idm_api.return_value = self.mkresponse(
+            200, STATUS_CHECK_RESULT
+        )
+        out = self.assert_cli_run("status")
 
         self.assertEqual(
             out,
