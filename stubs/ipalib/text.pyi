@@ -76,3 +76,4 @@ class NGettextFactory(GettextFactory):
 
 ngettext: Incomplete
 ugettext: Incomplete
+_: Incomplete

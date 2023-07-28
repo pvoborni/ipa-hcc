@@ -23,6 +23,7 @@ class IPAServerTests(conftest.IPABaseTests):
         from ipaserver.plugins import (
             hccconfig,  # noqa: F401
             hcchost,  # noqa: F401
+            hccidp,  # noqa: F401
             hccjwk,  # noqa: F401
             hccserverroles,  # noqa: F401
         )

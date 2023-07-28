@@ -184,6 +184,8 @@ install_server_plugin:
 	$(CP_PD) $(srcdir)/install/server/ui/js/plugins/hccconfig/hccconfig.js $(DEST)$(DATADIR)/ipa/ui/js/plugins/hccconfig/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/ui/js/plugins/hcchost/
 	$(CP_PD) $(srcdir)/install/server/ui/js/plugins/hcchost/hcchost.js $(DEST)$(DATADIR)/ipa/ui/js/plugins/hcchost/
+	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/ui/js/plugins/hccidp/
+	$(CP_PD) $(srcdir)/install/server/ui/js/plugins/hccidp/hccidp.js $(DEST)$(DATADIR)/ipa/ui/js/plugins/hccidp/
 
 .PHONY: install_registration_service
 install_registration_service:
