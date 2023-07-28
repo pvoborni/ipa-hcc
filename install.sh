@@ -11,7 +11,7 @@ SITELIB=$($PYTHON -c 'from sys import version_info as v; print("/usr/lib/python{
 
 ## phase 1, install files
 
-make install_server install_mockapi PYTHON=$PYTHON PYTHON_SITELIB=$SITELIB
+make install_server install_mockapi install_python PYTHON=$PYTHON PYTHON_SITELIB=$SITELIB
 
 ## phase 2, user, change permissions
 
@@ -26,6 +26,9 @@ semanage fcontext -a -f a -s system_u -t httpd_cache_t -r 's0' '/var/cache/ipa-h
 restorecon -R /var/cache/ipa-hcc || :
 
 $PYTHON -m compileall ${SITELIB}/ipaserver/install/plugins ${SITELIB}/ipaserver/plugins ${SITELIB}/ipahcc
+
+# ensure correct SELinux labels
+restorecon -R $SITELIB/ipahcc* $SITELIB/ipaserver/
 
 # run updater
 ipa-ldap-updater \

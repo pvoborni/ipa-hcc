@@ -2,7 +2,7 @@ VERSION = 0.11
 
 srcdir = .
 abs_srcdir = $(shell pwd)
-DEST =
+DEST = /
 
 # /etc
 SYSCONFDIR := $(shell rpm --eval '%{_sysconfdir}')
