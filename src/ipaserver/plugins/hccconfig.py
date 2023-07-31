@@ -5,16 +5,19 @@
 #
 """IPA plugin for Red Hat Hybrid Cloud Console
 """
-from ipalib import _, errors
+from urllib.parse import urlparse
+
+from ipalib import _, api, errors
 from ipalib.parameters import Str
 
-# pylint: disable=import-error
+# pylint: disable=import-error,ungrouped-imports
 from ipaserver.plugins.config import config, config_mod, config_show
 from ipaserver.plugins.internal import i18n_messages
 
+from ipahcc import hccplatform
 from ipaserver.plugins.hccserverroles import hcc_enrollment_server_role
 
-# pylint: enable=import-error
+# pylint: enable=import-error,ungrouped-imports
 
 hcc_config_class = "hccconfig"
 
@@ -157,3 +160,12 @@ config_mod.register_exc_callback(config_mod_hcc_exccb)
 i18n_messages.messages["hccconfig"] = {
     "name": _("Hybrid Cloud Console configuration")
 }
+
+inventory_url = urlparse(hccplatform.INVENTORY_API_URL)
+
+# pylint: disable=protected-access
+api.env._Env__d.update(
+    hcc_inventory_url=(
+        f"{inventory_url.scheme}://{inventory_url.netloc}/insights/inventory"
+    ),
+)

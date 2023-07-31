@@ -8,9 +8,10 @@ define([
         'freeipa/phases',
         'freeipa/ipa',
         'freeipa/reg',
-        'freeipa/util'
+        'freeipa/util',
+        'freeipa/jquery'
     ],
-    function(phases, IPA, reg, util) {
+    function(phases, IPA, reg, util, $) {
 
         // helper function
         function get_item(array, attr, value) {
@@ -75,7 +76,10 @@ define([
                 if (util.is_empty(value)) {
                     return '';
                 }
-                return '<a href="https://console.redhat.com/insights/inventory/'+value+'">'+value+'</a>';
+                var escaped = $("<div>").text(value).html();
+                return '<a href="${url}/${value}">${value}</a>'
+                    .replaceAll('${url}', IPA.env.hcc_inventory_url)
+                    .replaceAll('${value}', escaped);
             };
             return that;
         };
