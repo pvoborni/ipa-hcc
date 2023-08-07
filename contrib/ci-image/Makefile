@@ -3,10 +3,10 @@ PREFIX = quay.io/tiran/ipa-hcc-ci
 .PHONY: all 8 9 fedora push
 all: 8 9 fedora
 
-8:
+8: ipa-hcc.spec
 	podman build -f Containerfile.$@ -t $(PREFIX):$@ .
 
-9:
+9: ipa-hcc.spec
 	podman build -f Containerfile.$@ -t $(PREFIX):$@ .
 
 fedora: requirements.txt ipa-hcc.spec
