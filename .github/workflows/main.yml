@@ -26,3 +26,69 @@ jobs:
           ref: ${{ inputs.tag || github.ref }}
       - name: "Run tox for ${{ matrix.toxenv }}"
         run: "tox -e  ${{ matrix.toxenv }}"
+  srpm:
+    name: "srpm"
+    runs-on: "ubuntu-latest"
+    container: quay.io/tiran/ipa-hcc-ci:fedora
+    env:
+      RPKGDIR: "$GITHUB_WORKSPACE/build/rpkg"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          fetch-depth: 0
+      - name: "Set git safe directory for rpkg"
+        run: git config --system --add safe.directory $GITHUB_WORKSPACE
+      # TODO: rpkg fails when a submodule is not up to date
+      - name: "Remove internal submodule"
+        run: rm -f .gitmodules
+      - name: "Set rpkg output var"
+        run: echo "RPKGDIR=$GITHUB_WORKSPACE/build/rpkg" >> $GITHUB_ENV
+      - name: "Create rpkg output directory"
+        run: mkdir -p $RPKGDIR
+      - name: "Create spec file"
+        run: rpkg --verbose spec --outdir $RPKGDIR
+      - name: "Install dependencies"
+        run: dnf builddep -y --spec $RPKGDIR/ipa-hcc.spec
+      - name: "Build RPMs"
+        run: rpkg local --outdir $RPKGDIR
+      - name: "Store SRPM"
+        uses: actions/upload-artifact@v3
+        with:
+          name: srpm
+          retention-days: 7
+          path: |
+            ${{ env.RPKGDIR }}/*.src.rpm
+            ${{ env.RPKGDIR }}/*.spec
+  rpm:
+    name: "rpm ${{ matrix.version }}"
+    needs: srpm
+    runs-on: "ubuntu-latest"
+    container: quay.io/tiran/ipa-hcc-ci:${{ matrix.version }}
+    strategy:
+      fail-fast: true
+      matrix:
+        version: [8, 9]
+    steps:
+      - name: "Download SRPM artifact"
+        uses: actions/download-artifact@v3
+        with:
+          name: srpm
+      - name: "Set RPM build dir var"
+        run: echo "RPMBUILD=$GITHUB_WORKSPACE/rpmbuild/${{ matrix.version }}" >> $GITHUB_ENV
+      - name: "use our RPM build dir as top directory for rpmbuild"
+        run: echo "%_topdir $RPMBUILD" > ~/.rpmmacros
+      - name: "Create RPMBUILD directory"
+        run: mkdir -p $RPMBUILD
+      - name: "Install build dependencies"
+        run: yum-builddep -y $GITHUB_WORKSPACE/ipa-hcc.spec
+      - name: "Rebuild binary packages from source file"
+        run: rpmbuild --rebuild $GITHUB_WORKSPACE/ipa-hcc*.src.rpm
+      - name: "Create repo"
+        run: createrepo $RPMBUILD/RPMS
+      - name: "Store RPM"
+        uses: actions/upload-artifact@v3
+        with:
+          name: rpm-${{ matrix.version }}
+          retention-days: 7
+          path: |
+            ${{ env.RPMBUILD }}/RPMS/*

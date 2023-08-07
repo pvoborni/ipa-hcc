@@ -237,6 +237,7 @@ rm -rf %{buildroot}/%{python_sitelib}/__pycache__
 
 %install
 rm -rf $RPM_BUILD_ROOT
+export MAKEFLAGS="-j1"
 
 %__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_python install_client
 
