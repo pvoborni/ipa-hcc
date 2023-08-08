@@ -38,9 +38,6 @@ jobs:
           fetch-depth: 0
       - name: "Set git safe directory for rpkg"
         run: git config --system --add safe.directory $GITHUB_WORKSPACE
-      # TODO: rpkg fails when a submodule is not up to date
-      - name: "Remove internal submodule"
-        run: rm -f .gitmodules
       - name: "Set rpkg output var"
         run: echo "RPKGDIR=$GITHUB_WORKSPACE/build/rpkg" >> $GITHUB_ENV
       - name: "Create rpkg output directory"
