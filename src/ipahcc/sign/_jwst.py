@@ -115,7 +115,14 @@ class MultiJWST(jwt.JWT):
 
         return self.token.serialize(compact)
 
-    def deserialize_json(self, tok: str, key=typing.Union[JWKDict, JWKSet]):
+    # Parameter 'jwt' has been renamed to 'tok' in overriding
+    # 'MultiJWST.deserialize' method
+    def deserialize(
+        self,
+        # pylint: disable=arguments-renamed
+        tok: str,
+        key=typing.Union[JWKDict, JWKSet]
+    ) -> None:
         """Deserialize a JWT JSON token."""
         if isinstance(tok, str):
             tok_dict = json_decode(tok)
@@ -228,10 +235,7 @@ def validate_host_token(
     t = MultiJWST(check_claims=check_claims, algs=SUPPORTED_ALGS)
     t.validity = validity
     t.leeway = leeway
-    if raw_token.startswith("{"):
-        t.deserialize_json(raw_token, pub_key)
-    else:
-        t.deserialize(raw_token, pub_key)
+    t.deserialize(raw_token, pub_key)
     return json_decode(t.header), json_decode(t.claims)
 
 
