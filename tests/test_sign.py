@@ -177,6 +177,14 @@ class TestJWST(unittest.TestCase):
         with self.assertRaises(jwcrypto.jwt.JWTMissingKey):
             self.validate_token(j, other_set)
 
+    def test_jwt_multi_compact_disallowed(self):
+        priv = sign.generate_private_key()
+        pub = sign.get_public_key(priv)
+
+        tok = sign.MultiJWST()
+        with self.assertRaises(ValueError):
+            tok.deserialize("compact.not.supported", pub)
+
     def test_jwt_claim_mismatch(self):
         # compact JWT with single signature
         priv = sign.generate_private_key()
