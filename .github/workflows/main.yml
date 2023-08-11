@@ -12,7 +12,7 @@ jobs:
   tox-check:
     name: "tox ${{ matrix.toxenv }}"
     runs-on: "ubuntu-latest"
-    container: quay.io/tiran/ipa-hcc-ci:fedora
+    container: quay.io/podengo/ipa-hcc-ci:fedora
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +29,7 @@ jobs:
   srpm:
     name: "srpm"
     runs-on: "ubuntu-latest"
-    container: quay.io/tiran/ipa-hcc-ci:fedora
+    container: quay.io/podengo/ipa-hcc-ci:fedora
     env:
       RPKGDIR: "$GITHUB_WORKSPACE/build/rpkg"
     steps:
@@ -60,7 +60,7 @@ jobs:
     name: "rpm ${{ matrix.version }}"
     needs: srpm
     runs-on: "ubuntu-latest"
-    container: quay.io/tiran/ipa-hcc-ci:${{ matrix.version }}
+    container: quay.io/podengo/ipa-hcc-ci:${{ matrix.version }}
     strategy:
       fail-fast: true
       matrix:

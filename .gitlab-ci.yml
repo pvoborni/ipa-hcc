@@ -8,7 +8,7 @@ stages:
 tox_check:
   tags:
     - shared
-  image: quay.io/tiran/ipa-hcc-ci:fedora
+  image: quay.io/podengo/ipa-hcc-ci:fedora
   stage: check
   needs: []
   parallel:
@@ -27,7 +27,7 @@ srpm:
     - shared
   stage: srpm
   needs: []
-  image: quay.io/tiran/ipa-hcc-ci:fedora
+  image: quay.io/podengo/ipa-hcc-ci:fedora
   before_script:
     - dnf install -y 'dnf-command(builddep)'
     - mkdir -p $CI_PROJECT_DIR/rpkg
@@ -55,7 +55,7 @@ rpms:
       - VERSION:
           - 8
           - 9
-  image: quay.io/tiran/ipa-hcc-ci:$VERSION
+  image: quay.io/podengo/ipa-hcc-ci:$VERSION
   before_script:
     - export RPMBUILD=$CI_PROJECT_DIR/rpmbuild/$VERSION
     - export RPKG_DIR=$CI_PROJECT_DIR/rpkg

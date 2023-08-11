@@ -1,4 +1,4 @@
-PREFIX = quay.io/tiran/ipa-hcc-ci
+PREFIX = quay.io/podengo/ipa-hcc-ci
 
 .PHONY: all 8 9 fedora push
 all: 8 9 fedora

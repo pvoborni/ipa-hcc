@@ -1,10 +1,11 @@
-# see quay.io/tiran/ipa-hcc-ci
+# see quay.io/podengo/ipa-hcc-ci:fedora
 FROM registry.fedoraproject.org/fedora:37
-COPY requirements.txt ipa-hcc.spec /tmp/
 RUN dnf update -y \
     && dnf --nodocs --setopt=install_weak_deps=False -y --best \
         install dnf-utils dnf-plugins-core rpkg \
-    && dnf builddep --nodocs --setopt=install_weak_deps=False -y --best \
+    && dnf clean all
+COPY requirements.txt ipa-hcc.spec /tmp/
+RUN dnf builddep --nodocs --setopt=install_weak_deps=False -y --best \
         -D "with_devel 1" --spec /tmp/ipa-hcc.spec \
     && dnf clean all
 RUN python3.6 -m ensurepip \
