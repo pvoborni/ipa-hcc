@@ -1,6 +1,6 @@
 ---
 # Configuration for permanent test cluster
-# Uses cheimes/ipa-hcc COPR
+# Uses @podengo/ipa-hcc COPR
 domains:
   - name: ipahcc.test
     type: IPA

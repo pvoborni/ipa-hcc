@@ -37,7 +37,7 @@ if [ ! -f $IMG ]; then
         --run-command 'dnf -y module enable idm:DL1' \
         --update \
         --install 'openssh-server,openssl,vim-enhanced,git,rsync,ipa-server,rhc,insights-client,dnf-command(copr)' \
-        --run-command 'dnf copr enable copr.devel.redhat.com/cheimes/ipa-hcc' \
+        --run-command 'dnf copr enable @podengo/ipa-hcc' \
         --sm-unregister \
         -a $IMG
 

@@ -17,7 +17,7 @@ rhc_key: "{{ lookup('env', 'RHC_KEY', default=undef()) }}"
 rh_api_token: "{{ lookup('env', 'RH_API_TOKEN', default=undef()) }}"
 
 # COPR repo with builds (not used by hmsidm-dev.yaml)
-ipa_hcc_copr: copr.devel.redhat.com/cheimes/ipa-hcc
+ipa_hcc_copr: "@podengo/ipa-hcc"
 
 # see ipahcc.hccplatform
 domain_id: '772e9618-d0f8-4bf8-bfed-d2831f63c619'

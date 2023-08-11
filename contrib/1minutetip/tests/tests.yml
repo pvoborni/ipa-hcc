@@ -38,7 +38,7 @@
       when: "ansible_distribution == 'RedHat' and ansible_distribution_major_version == '8'"
 
     - name: Enable ipa-hcc COPR
-      shell: "dnf -y copr enable copr.devel.redhat.com/cheimes/ipa-hcc"
+      shell: "dnf -y copr enable @podengo/ipa-hcc"
 
     - name: upgrade all packages
       package:

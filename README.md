@@ -178,7 +178,7 @@ account.
 
 ```
 dnf install 'dnf-command(copr)'
-dnf copr enable copr.devel.redhat.com/cheimes/ipa-hcc
+dnf copr enable @podengo/ipa-hcc
 dnf install --refresh ipa-hcc-server
 ```
 
@@ -189,7 +189,7 @@ dnf install --refresh ipa-hcc-server
 RHEL 8.8+ or RHEL 9.2+
 ```
 dnf install 'dnf-command(copr)'
-dnf copr enable copr.devel.redhat.com/cheimes/ipa-hcc
+dnf copr enable @podengo/ipa-hcc
 dnf install --refresh ipa-client ipa-hcc-client
 ```
 
