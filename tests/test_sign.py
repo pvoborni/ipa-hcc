@@ -118,7 +118,6 @@ class TestJWST(unittest.TestCase):
         )
 
     def test_jwt_single_sig(self):
-        # compact JWT with single signature
         priv1 = sign.generate_private_key()
         pub1 = sign.get_public_key(priv1)
 
@@ -126,19 +125,17 @@ class TestJWST(unittest.TestCase):
         self.assertIsInstance(tok, jwcrypto.jwt.JWT)
         self.assertIsInstance(tok, sign.MultiJWST)
 
-        compact = tok.serialize()
-        self.assertIsInstance(compact, str)
-        self.assertEqual(compact.count("."), 2)
+        with self.assertRaises(ValueError):
+            tok.serialize(compact=True)
+
         j = tok.serialize(compact=False)
         self.assertIsInstance(j, str)
         self.assertIsInstance(sign.json_decode(j), dict)
 
-        self.validate_token(compact, pub1)
         self.validate_token(j, pub1)
 
         pub_set = sign.JWKSet()
         pub_set.add(pub1)
-        self.validate_token(compact, pub_set)
         self.validate_token(j, pub_set)
 
         priv2 = sign.generate_private_key()
@@ -146,8 +143,6 @@ class TestJWST(unittest.TestCase):
         other_set = sign.JWKSet()
         other_set.add(pub2)
 
-        with self.assertRaises(jwcrypto.jws.InvalidJWSSignature):
-            self.validate_token(compact, pub2)
         with self.assertRaises(jwcrypto.jwt.JWTMissingKey):
             self.validate_token(j, other_set)
 

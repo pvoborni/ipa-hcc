@@ -101,13 +101,18 @@ class MultiJWST(jwt.JWT):
     def make_encrypted_token(self, key):  # pragma: no cover
         raise NotImplementedError
 
-    def serialize(self, compact=True):
+    def serialize(self, compact=False):
         """Serializes the object into a JWS token.
 
-        Override base class implementation to allow non-compact
-        serialization. jwcrypto >= 0.13.0 only allows compact serialization.
-        Our subclass supports both types.
+        Generates a standard JSON format. `compact` must be False as jwcrpyto
+        doesn't support the compact form with multiple signatures.
         """
+
+        if compact:
+            raise ValueError(
+                "Can't use compact encoding with multiple signatures"
+            )
+
         return self.token.serialize(compact)
 
     def deserialize_json(self, tok: str, key=typing.Union[JWKDict, JWKSet]):
