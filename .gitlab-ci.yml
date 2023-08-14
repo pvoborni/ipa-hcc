@@ -5,10 +5,11 @@ stages:
   - rpms
   - test
 
-tox_check:
+.tox_check_template:
   tags:
     - shared
-  image: quay.io/podengo/ipa-hcc-ci:fedora
+  # parallel matrix does not work for image
+  image: none
   stage: check
   needs: []
   parallel:
@@ -21,6 +22,14 @@ tox_check:
     - tox -e $TOXENV
   only:
     - merge_requests
+
+tox_check_f37:
+  extends: .tox_check_template
+  image: quay.io/podengo/ipa-hcc-ci:f37
+
+tox_check_f38:
+  extends: .tox_check_template
+  image: quay.io/podengo/ipa-hcc-ci:f38
 
 srpm:
   tags:

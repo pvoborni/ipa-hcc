@@ -69,7 +69,7 @@ BuildRequires: tox
 BuildRequires: python3.6
 BuildRequires: python3.9
 BuildRequires: rpmlint
-BuildRequires: npm
+BuildRequires: nodejs-npm
 BuildRequires: openldap-devel
 BuildRequires: openldap-compat
 BuildRequires: gcc

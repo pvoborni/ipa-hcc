@@ -12,7 +12,7 @@ jobs:
   tox-check:
     name: "tox ${{ matrix.toxenv }}"
     runs-on: "ubuntu-latest"
-    container: quay.io/podengo/ipa-hcc-ci:fedora
+    container: "{{ matrix.image }}"
     strategy:
       fail-fast: false
       matrix:
@@ -20,12 +20,15 @@ jobs:
           - "py,py36,py39,cov"
           - "ruff,mypy,pylint"
           - "jslint,yamllint,maketest"
+        image:
+          - quay.io/podengo/ipa-hcc-ci:f37
+          - quay.io/podengo/ipa-hcc-ci:f38
     steps:
       - uses: "actions/checkout@v3"
         with:
           ref: ${{ inputs.tag || github.ref }}
       - name: "Run tox for ${{ matrix.toxenv }}"
-        run: "tox -e  ${{ matrix.toxenv }}"
+        run: "tox -e ${{ matrix.toxenv }}"
   srpm:
     name: "srpm"
     runs-on: "ubuntu-latest"

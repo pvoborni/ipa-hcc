@@ -1,5 +1,6 @@
 # see quay.io/podengo/ipa-hcc-ci:fedora
-FROM registry.fedoraproject.org/fedora:37
+ARG VERSION=37
+FROM registry.fedoraproject.org/fedora:$VERSION
 RUN dnf update -y \
     && dnf --nodocs --setopt=install_weak_deps=False -y --best \
         install dnf-utils dnf-plugins-core rpkg \
