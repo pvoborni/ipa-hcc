@@ -11,6 +11,20 @@ and `make`.
 
 RHEL 8 builds and RHEL 8 COPR need `idm:DL1` module.
 
+# Release
+
+1) Bumb `VERSION` in `Makefile`.
+2) Run `make version` to update version information in various files
+3) Push and commit changes.
+4) Request a new tag with `rpkg tag`, edit the changelog in your editor, and
+   write to create the tag. `rpkg` writes the changelog to the tag's metadata.
+   The changelog message is used in the auto-generated RPM spec file.
+5) Push the tag with `git push --tags`
+
+The procedure will create a release build on COPR, e.g. `0.12-1`. The next
+dev build then has `0.12.git.1.abcdef-1` (git commit `1` after `0.12` with
+commit hash `abcdef`).
+
 # Install build and test dependencies
 
 The build dependencies are listed in the `rpkg` spec file template. To install

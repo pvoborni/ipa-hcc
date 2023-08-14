@@ -36,7 +36,7 @@ from ipapython.version import VENDOR_VERSION as IPA_VERSION
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
-VERSION = "0.11"
+VERSION = "0.12"
 
 # copied from ipahcc.hccplatform
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
