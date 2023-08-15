@@ -68,6 +68,7 @@ MOCKAPI_PRIV_JWK = os.path.join(
 MOCKAPI_PUB_JWK = os.path.join(
     HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-pub-jwk.json"
 )
+TEST_DOMREG_KEY = b"secretkey"
 
 
 class _HCCConfig:

@@ -42,6 +42,8 @@ SCHEMATA = {
     "HostConfResponse": "host_conf_response.json",
     "IPADomainRequest": "ipadomain_request.json",
     "IPADomainResponse": "ipadomain_response.json",
+    "DomainRegTokenRequest": "domain_reg_token_request.json",
+    "DomainRegTokenResponse": "domain_reg_token_response.json",
     "Errors": "errors.json",
 }
 

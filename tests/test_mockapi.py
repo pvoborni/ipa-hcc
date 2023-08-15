@@ -1,11 +1,13 @@
 import copy
+import unittest
+import uuid
 from unittest import mock
 
 from test_hccapi import DOMAIN_RESULT
 
 import conftest
 from ipahcc import hccplatform, sign
-from ipahcc.mockapi import wsgi
+from ipahcc.mockapi import domain_token, wsgi
 
 domain_request = {
     "title": "Some title",
@@ -156,3 +158,69 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
             "revoked_kids": ["bad key id"],
         }
         self.assertEqual(response, expected)
+
+    def test_domain_reg_token(self):
+        path = "/domains/token"
+        body = {"domain_type": hccplatform.HCC_DOMAIN_TYPE}
+        headers = {}
+        status_code, status_msg, headers, response = self.call_wsgi(
+            path,
+            body,
+            method="POST",
+        )
+        self.assert_response(200, status_code, status_msg, headers, response)
+        token: str = response["domain_token"]
+        expires: int = response["expiration"]
+        # pylint: disable=protected-access
+        tok_expires_ns = domain_token._validate_token_sig(
+            hccplatform.TEST_DOMREG_KEY,
+            hccplatform.HCC_DOMAIN_TYPE,
+            conftest.ORG_ID,
+            token,
+        )
+        tok_expires = int(tok_expires_ns / 1_000_000_000)
+        self.assertEqual(expires, tok_expires)
+
+
+class TestDomRegToken(unittest.TestCase):
+    token = "F3n-iOZn1VI.wbzIH7v-kRrdvfIvia4nBKAvEpIKGdv6MSIFXeUtqVY"  # noqa: S105
+    domain_id = uuid.UUID("7b160558-8273-5a24-b559-6de3ff053c63")
+    expires = 1691662998988903762
+    org_id = "123456"
+    key = b"secretkey"
+
+    def test_domain_id(self):
+        self.assertEqual(
+            domain_token.token_domain_id(self.token), self.domain_id
+        )
+
+    def test_generate_token(self):
+        # pylint: disable=protected-access
+        token = domain_token._generate_token_ns(
+            self.key, hccplatform.HCC_DOMAIN_TYPE, self.org_id, self.expires
+        )
+        self.assertEqual(token, self.token)
+        token, expires = domain_token.generate_token(
+            self.key, hccplatform.HCC_DOMAIN_TYPE, self.org_id
+        )
+        self.assertEqual(
+            domain_token._validate_token_sig(
+                self.key, hccplatform.HCC_DOMAIN_TYPE, self.org_id, token
+            ),
+            expires,
+        )
+
+    def test_validate_token(self):
+        # pylint: disable=protected-access
+        expires = domain_token._validate_token_sig(
+            self.key, hccplatform.HCC_DOMAIN_TYPE, self.org_id, self.token
+        )
+        self.assertEqual(expires, self.expires)
+        with self.assertRaisesRegex(ValueError, "Invalid signature"):
+            domain_token.validate_token(
+                self.key, hccplatform.HCC_DOMAIN_TYPE, "789789", self.token
+            )
+        with self.assertRaisesRegex(ValueError, "token expired"):
+            domain_token.validate_token(
+                self.key, hccplatform.HCC_DOMAIN_TYPE, self.org_id, self.token
+            )

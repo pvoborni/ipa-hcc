@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Root Type for domain registration token request",
+  "description": "A domain registration request",
+  "type": "object",
+  "required": [
+    "domain_type"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "domain_type": {
+      "$ref": "defs.json#/$defs/DomainType"
+    }
+  }
+}

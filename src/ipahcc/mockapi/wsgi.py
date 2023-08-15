@@ -21,6 +21,8 @@ from ipaplatform.paths import paths
 from ipahcc import hccplatform, sign
 from ipahcc.server.framework import HTTPException, JSONWSGIApp, route
 
+from . import domain_token
+
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-mockapi")
 logger.setLevel(logging.DEBUG)
@@ -39,14 +41,22 @@ class Application(JSONWSGIApp):
 
     def _load_jwk(self) -> typing.Tuple[sign.JWKDict, str]:
         if not os.path.isfile(hccplatform.MOCKAPI_PRIV_JWK):
-            logger.warning("Generating mockapi JWK %s", hccplatform.MOCKAPI_PRIV_JWK)
+            logger.warning(
+                "Generating mockapi JWK %s", hccplatform.MOCKAPI_PRIV_JWK
+            )
             priv_key = sign.generate_private_key()
-            with open(hccplatform.MOCKAPI_PRIV_JWK, "w", encoding="utf-8") as f:
+            with open(
+                hccplatform.MOCKAPI_PRIV_JWK, "w", encoding="utf-8"
+            ) as f:
                 f.write(priv_key.export_private())
-            with open(hccplatform.MOCKAPI_PUB_JWK, "w", encoding="utf-8") as f:
+            with open(
+                hccplatform.MOCKAPI_PUB_JWK, "w", encoding="utf-8"
+            ) as f:
                 f.write(priv_key.export_public())
 
-        logger.info("Loading mockapi JWK from %s", hccplatform.MOCKAPI_PRIV_JWK)
+        logger.info(
+            "Loading mockapi JWK from %s", hccplatform.MOCKAPI_PRIV_JWK
+        )
         with open(hccplatform.MOCKAPI_PRIV_JWK, "r", encoding="utf-8") as f:
             priv_key = sign.load_key(f.read())
         with open(hccplatform.MOCKAPI_PUB_JWK, "r", encoding="utf-8") as f:
@@ -242,6 +252,25 @@ class Application(JSONWSGIApp):
         }
         return response
 
+    @route("POST", "^/domains/token$", schema="DomainRegToken")
+    def handle_domain_reg_token(self, env: dict, body: dict) -> dict:
+        # idmscv-backend does not use mTLS auth
+        domain_type: str = body["domain_type"]
+        if domain_type != hccplatform.HCC_DOMAIN_TYPE:
+            raise HTTPException(400, "unsupported domain type")
+        org_id, _ = self.parse_cert(env)
+        token, expires_ns = domain_token.generate_token(
+            hccplatform.TEST_DOMREG_KEY, domain_type, org_id
+        )
+        domain_id = domain_token.token_domain_id(token)
+        response = {
+            "domain_id": str(domain_id),
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+            "domain_token": token,
+            "expiration": int(expires_ns / 1_000_000_000),
+        }
+        return response
+
     @route(
         "PUT",
         "^/domains/(?P<domain_id>[^/]+)/register$",
@@ -254,7 +283,26 @@ class Application(JSONWSGIApp):
         regtok = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
         if regtok is None:
             raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
-        if regtok != "mockapi":  # noqa: S105
+        if "." in regtok:
+            # it's a domain registration token
+            org_id, _ = self.parse_cert(env)
+            try:
+                domain_id_tok = domain_token.validate_token(
+                    hccplatform.TEST_DOMREG_KEY,
+                    hccplatform.HCC_DOMAIN_TYPE,
+                    org_id,
+                    regtok,
+                )
+            except ValueError as e:
+                raise HTTPException(
+                    404, f"invalid X-RH-IDM-Registration-Token: {e}"
+                ) from None
+            if domain_id_tok != domain_id:
+                raise HTTPException(
+                    404,
+                    "invalid X-RH-IDM-Registration-Token: domain_id mismatch",
+                )
+        elif regtok != "mockapi":  # noqa: S105
             raise HTTPException(404, "invalid X-RH-IDM-Registration-Token")
         return self._handle_domain(env, body, domain_id)
 
