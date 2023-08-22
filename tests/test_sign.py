@@ -146,7 +146,7 @@ class TestJWST(unittest.TestCase):
         with self.assertRaises(jwcrypto.jwt.JWTMissingKey):
             self.validate_token(j, other_set)
 
-    def test_jwt_multi_sig(self):
+    def test_jwt_multi_sig_serialize(self):
         priv1 = sign.generate_private_key()
         pub1 = sign.get_public_key(priv1)
         priv2 = sign.generate_private_key()
@@ -166,8 +166,32 @@ class TestJWST(unittest.TestCase):
         other_set.add(pub3)
 
         tok = self.generate_token(priv_set)
-        j = tok.serialize(compact=False)
 
+        i = tok.serialize(compact=False)
+        tok.deserialize(i, pub_set)
+
+    def test_jwt_multi_sig_validate(self):
+        priv1 = sign.generate_private_key()
+        pub1 = sign.get_public_key(priv1)
+        priv2 = sign.generate_private_key()
+        pub2 = sign.get_public_key(priv2)
+        priv3 = sign.generate_private_key()
+        pub3 = sign.get_public_key(priv3)
+
+        priv_set = sign.JWKSet()
+        priv_set.add(priv1)
+        priv_set.add(priv2)
+
+        pub_set = sign.JWKSet()
+        pub_set.add(pub1)
+        pub_set.add(pub2)
+
+        other_set = sign.JWKSet()
+        other_set.add(pub3)
+
+        tok = self.generate_token(priv_set)
+
+        j = tok.serialize(compact=False)
         self.validate_token(j, pub1)
         self.validate_token(j, pub2)
         self.validate_token(j, pub_set)
