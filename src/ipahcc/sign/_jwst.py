@@ -123,12 +123,20 @@ class MultiJWST(jwt.JWT):
         tok: str,
         key=typing.Union[JWKDict, JWKSet]
     ) -> None:
-        """Deserialize a JWT JSON token."""
-        if isinstance(tok, str):
+        """Deserialize a JWT JSON token.
+
+        If a key is provided a verification step will be attempted after
+        the object is successfully deserialized.
+
+        The deserialization of the compact form is not supported using multiple
+        signatures in jwcrypto.
+        """
+        if isinstance(tok, str) and tok.startswith("{"):
             tok_dict = json_decode(tok)
             tok_str = tok
         else:
-            raise TypeError(f"tok must be a dict or str, got {type(tok)}.")
+            # Compact notation is not supported.
+            raise ValueError("'tok' must be a serialized JSON object.")
 
         # see RFC 7516, section 9
         if "payload" in tok_dict:
