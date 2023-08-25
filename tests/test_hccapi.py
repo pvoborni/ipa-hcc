@@ -1,5 +1,6 @@
 import copy
 import textwrap
+import typing
 from unittest import mock
 
 from ipalib import x509
@@ -12,7 +13,7 @@ from ipahcc.server import hccapi
 
 CACERT = x509.load_pem_x509_certificate(conftest.IPA_CA_DATA.encode("ascii"))
 
-COMMON_RESULT = {
+COMMON_RESULT: typing.Dict[str, typing.Any] = {
     "domain_name": conftest.DOMAIN,
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     hccplatform.HCC_DOMAIN_TYPE: {
@@ -175,6 +176,7 @@ class TestHCCAPI(TestHCCAPICommon):
 class TestCLI(TestHCCAPICommon):
     def setUp(self):
         super().setUp()
+        p: typing.Any
         p = mock.patch("ipahcc.hccplatform.is_ipa_configured")
         self.m_is_ipa_configured = p.start()
         self.addCleanup(p.stop)

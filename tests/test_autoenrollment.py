@@ -209,6 +209,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertEqual(ae.tmpdir, None)
         with ae:
             tmpdir = ae.tmpdir
+            assert tmpdir
             self.assertTrue(os.path.isdir(tmpdir))
 
         self.assertEqual(ae.tmpdir, None)

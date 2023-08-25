@@ -226,7 +226,7 @@ class AutoEnrollment:
     def __exit__(self, exc_type, exc_value, traceback):
         if self.args.verbose >= 2:
             logger.info("Keeping temporary directory %s", self.tmpdir)
-        else:
+        elif self.tmpdir is not None:
             shutil.rmtree(self.tmpdir)
             self.tmpdir = None
 

@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import sys
+import typing
 import unittest
 from http.client import responses as http_responses
 from unittest import mock
@@ -73,7 +74,6 @@ else:  # pragma: no cover
 
 try:
     # pylint: disable=unused-import,ungrouped-imports
-    import ipaclient.install  # noqa: F401
     import ipalib.install  # noqa: F401
 except ImportError:
     HAS_IPA_INSTALL = False
@@ -107,6 +107,8 @@ class CaptureHandler(logging.Handler):
 
 class IPABaseTests(unittest.TestCase):
     maxDiff = None
+
+    app: typing.Any
 
     def log_capture_start(self):
         self.log_capture = CaptureHandler()
@@ -161,7 +163,7 @@ class IPABaseTests(unittest.TestCase):
     def mkresponse(self, status_code, body):
         j = json.dumps(body).encode("utf-8")
         resp = Response()
-        resp.url = None
+        resp.url = "http://ipahcc.test"
         resp.status_code = status_code
         resp.reason = http_responses[status_code]
         resp.encoding = "utf-8"

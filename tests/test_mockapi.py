@@ -1,4 +1,5 @@
 import copy
+import typing
 import unittest
 import uuid
 from unittest import mock
@@ -107,7 +108,7 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
                 conftest.CLIENT_FQDN,
             )
         )
-        body = {}
+        body: typing.Dict[str, typing.Any] = {}
         status_code, status_msg, headers, response = self.call_wsgi(
             path, body, method="POST"
         )
@@ -159,7 +160,7 @@ class TestMockAPIWSGI(conftest.IPABaseTests):
         }
         self.assertEqual(response, expected)
 
-    def test_domain_reg_token(self):
+    def test_domain_reg_token(self) -> None:
         path = "/domains/token"
         body = {"domain_type": hccplatform.HCC_DOMAIN_TYPE}
         headers = {}

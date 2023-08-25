@@ -1,6 +1,7 @@
 #
 # very basic tests to ensure code is at least importable.
 #
+import typing
 
 import conftest
 from ipahcc import hccplatform
@@ -69,7 +70,7 @@ class TestJSONSchema(conftest.IPABaseTests):
             self.assertIn("'invalid' is not one of ['rhel-idm']", str(e))
 
     def test_hcc_request(self):
-        instance = {
+        instance: typing.Dict[str, typing.Any] = {
             "domain_name": conftest.DOMAIN,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_id": conftest.DOMAIN_ID,
