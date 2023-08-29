@@ -1,4 +1,5 @@
 import copy
+import time
 import typing
 import unittest
 import uuid
@@ -90,6 +91,15 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
         self.addCleanup(p.stop)
         self.m_access_token.return_value = "access token"
 
+    def get_domain_reg_token(self) -> dict:
+        path = "/domains/token"
+        body = {"domain_type": hccplatform.HCC_DOMAIN_TYPE}
+        status_code, status_msg, headers, response = self.call_wsgi(
+            path, body, method="POST"
+        )
+        self.assert_response(200, status_code, status_msg, headers, response)
+        return response
+
     def test_root(self):
         status_code, status_msg, headers, response = self.call_wsgi(
             "/", {}, method="GET"
@@ -124,8 +134,60 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
         self.assertEqual(header["kid"], PUB_KEY["kid"])
         self.assertIn("jti", claims)
 
-    def test_register_domain(self):
-        headers = {"HTTP_X_RH_IDM_REGISTRATION_TOKEN": "mockapi"}
+    def test_get_domain_reg_token(self):
+        response = self.get_domain_reg_token()
+        self.assertEqual(response["domain_type"], hccplatform.HCC_DOMAIN_TYPE)
+        self.assertGreater(response["expiration"], time.time())
+
+    def test_domain_reg_token(self) -> None:
+        path = "/domains/token"
+        body = {"domain_type": hccplatform.HCC_DOMAIN_TYPE}
+        headers = {}
+        status_code, status_msg, headers, response = self.call_wsgi(
+            path,
+            body,
+            method="POST",
+        )
+        self.assert_response(200, status_code, status_msg, headers, response)
+        token: str = response["domain_token"]
+        expires: int = response["expiration"]
+        # pylint: disable=protected-access
+        tok_expires_ns = domain_token._validate_token_sig(
+            hccplatform.TEST_DOMREG_KEY,
+            hccplatform.HCC_DOMAIN_TYPE,
+            conftest.ORG_ID,
+            token,
+        )
+        tok_expires = int(tok_expires_ns / 1_000_000_000)
+        self.assertEqual(expires, tok_expires)
+
+    def test_register_domain_token(self):
+        tok = self.get_domain_reg_token()
+        path = "/domains"
+        status_code, status_msg, headers, response = self.call_wsgi(
+            path,
+            domain_request,
+            method="POST",
+            extra_headers={
+                "X-RH-IDM-Registration-Token": tok["domain_token"],
+            },
+        )
+        self.assert_response(200, status_code, status_msg, headers, response)
+        expected: typing.Dict[str, typing.Any] = copy.deepcopy(domain_request)
+        expected.update(
+            auto_enrollment_enabled=True,
+            domain_id=tok["domain_id"],
+            signing_keys={
+                "keys": [self.app.raw_pub_key],
+                "revoked_kids": ["bad key id"],
+            },
+        )
+        self.assertEqual(response, expected)
+        self.m_api.Command.config_mod.assert_called_with(
+            hccorgid=conftest.ORG_ID
+        )
+
+    def test_register_domain_old(self):
         path = "/".join(("", "domains", conftest.DOMAIN_ID, "register"))
         status_code, status_msg, headers, response = self.call_wsgi(
             path,
@@ -156,28 +218,6 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
             "revoked_kids": ["bad key id"],
         }
         self.assertEqual(response, expected)
-
-    def test_domain_reg_token(self) -> None:
-        path = "/domains/token"
-        body = {"domain_type": hccplatform.HCC_DOMAIN_TYPE}
-        headers = {}
-        status_code, status_msg, headers, response = self.call_wsgi(
-            path,
-            body,
-            method="POST",
-        )
-        self.assert_response(200, status_code, status_msg, headers, response)
-        token: str = response["domain_token"]
-        expires: int = response["expiration"]
-        # pylint: disable=protected-access
-        tok_expires_ns = domain_token._validate_token_sig(
-            hccplatform.TEST_DOMREG_KEY,
-            hccplatform.HCC_DOMAIN_TYPE,
-            conftest.ORG_ID,
-            token,
-        )
-        tok_expires = int(tok_expires_ns / 1_000_000_000)
-        self.assertEqual(expires, tok_expires)
 
 
 class TestDomRegToken(unittest.TestCase):

@@ -242,7 +242,7 @@ class HCCAPI:
     def __exit__(self, exc_type, exc_value, traceback):
         self.api.Backend.ldap2.disconnect()
 
-    def register_domain(
+    def register_domain_old(
         self, domain_id: str, token: str
     ) -> typing.Tuple[dict, APIResult]:
         config = self._get_ipa_config(all_fields=True)
@@ -251,7 +251,7 @@ class HCCAPI:
         extra_headers = {
             "X-RH-IDM-Registration-Token": token,
         }
-        resp = self._submit_idm_api(
+        resp = self._submit_idmsvc_api(
             method="PUT",
             subpath=("domains", domain_id, "register"),
             payload=info,
@@ -261,6 +261,40 @@ class HCCAPI:
         # update after successful registration
         try:
             self.api.Command.config_mod(hccdomainid=str(domain_id))
+        except errors.EmptyModlist:
+            logger.debug("hccdomainid=%s already configured", domain_id)
+        else:
+            logger.debug("hccdomainid=%s set", domain_id)
+        msg = (
+            f"Successfully registered domain '{info['domain_name']}' "
+            f"with Hybrid Cloud Console (id: {domain_id})."
+        )
+        result = APIResult.from_response(resp, 0, msg)
+        return info, result
+
+    def register_domain_token(
+        self, token: str
+    ) -> typing.Tuple[dict, APIResult]:
+        config = self._get_ipa_config(all_fields=True)
+        info = self._get_ipa_info(config)
+        schema.validate_schema(info, "IPADomainRequest")
+        extra_headers = {
+            "X-RH-IDM-Registration-Token": token,
+        }
+        resp = self._submit_idmsvc_api(
+            method="POST",
+            subpath=("domains",),
+            payload=info,
+            extra_headers=extra_headers,
+        )
+        response = resp.json()
+        schema.validate_schema(response, "IPADomainResponse")
+        domain_id = response["domain_id"]
+        # update after successful registration
+        try:
+            self.api.Command.config_mod(
+                hccdomainid=str(domain_id),
+            )
         except errors.EmptyModlist:
             logger.debug("hccdomainid=%s already configured", domain_id)
         else:
@@ -293,7 +327,7 @@ class HCCAPI:
 
         info = self._get_ipa_info(config)
         schema.validate_schema(info, "IPADomainRequest")
-        resp = self._submit_idm_api(
+        resp = self._submit_idmsvc_api(
             method="PUT",
             subpath=("domains", domain_id, "update"),
             payload=info,
@@ -324,6 +358,20 @@ class HCCAPI:
             msg = "IPA domain is not registered."
         result = APIResult.from_dict(info, 200, 0, msg)
         return {}, result
+
+    def domain_reg_token(self) -> typing.Tuple[dict, APIResult]:
+        body = {"domain_type": hccplatform.HCC_DOMAIN_TYPE}
+        schema.validate_schema(body, "DomainRegTokenRequest")
+        resp = self._submit_idmsvc_api(
+            method="POST",
+            subpath=("domains", "token"),
+            payload=body,
+        )
+        response = resp.json()
+        schema.validate_schema(response, "DomainRegTokenResponse")
+        msg = "Successfully requested a domain registration token."
+        result = APIResult.from_response(resp, 0, msg)
+        return body, result
 
     def _get_domain_id(self, config: typing.Dict[str, typing.Any]):
         domain_id = _get_one(config, "hccdomainid", None)
@@ -470,7 +518,7 @@ class HCCAPI:
             ),
         }
 
-    def _submit_idm_api(
+    def _submit_idmsvc_api(
         self,
         method: str,
         subpath: tuple,

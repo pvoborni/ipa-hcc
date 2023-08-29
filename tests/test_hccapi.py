@@ -1,6 +1,7 @@
 import copy
 import textwrap
 import typing
+import unittest
 from unittest import mock
 
 from ipalib import x509
@@ -9,6 +10,7 @@ from ipapython.dnsutil import DNSName
 
 import conftest
 from ipahcc import hccplatform
+from ipahcc.mockapi import domain_token
 from ipahcc.server import hccapi
 
 CACERT = x509.load_pem_x509_certificate(conftest.IPA_CA_DATA.encode("ascii"))
@@ -64,6 +66,13 @@ STATUS_CHECK_RESULT.update(
         "org_id": conftest.ORG_ID,
     }
 )
+
+DOMAIN_REG_TOKEN_RESULT = {
+    "domain_token": "F3n-iOZn1VI.wbzIH7v-kRrdvfIvia4nBKAvEpIKGdv6MSIFXeUtqVY",
+    "domain_id": "7b160558-8273-5a24-b559-6de3ff053c63",
+    "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+    "expiration": 1691662998,
+}
 
 
 class TestHCCAPICommon(conftest.IPABaseTests):
@@ -146,15 +155,38 @@ class TestHCCAPICommon(conftest.IPABaseTests):
         self.m_genrid.return_value = "rid"
         self.addCleanup(p.stop)
 
+    def gen_domain_reg_token(self):
+        token, expires_ns = domain_token.generate_token(
+            hccplatform.TEST_DOMREG_KEY,
+            hccplatform.HCC_DOMAIN_TYPE,
+            conftest.ORG_ID,
+        )
+        domain_id = domain_token.token_domain_id(token)
+        return {
+            "domain_id": str(domain_id),
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
+            "domain_token": token,
+            "expiration": int(expires_ns / 1_000_000_000),
+        }
+
 
 class TestHCCAPI(TestHCCAPICommon):
-    def test_register_domain(self):
+    def test_register_domain_old(self):
         self.m_session.request.return_value = self.mkresponse(
             200, DOMAIN_RESULT
         )
-        info, resp = self.m_hccapi.register_domain(
+        info, resp = self.m_hccapi.register_domain_old(
             conftest.DOMAIN_ID, "mockapi"
         )
+        self.assertIsInstance(info, dict)
+        self.assertIsInstance(resp, hccapi.APIResult)
+
+    def test_register_domain_token(self):
+        tok = self.gen_domain_reg_token()
+        self.m_session.request.return_value = self.mkresponse(
+            200, DOMAIN_RESULT
+        )
+        info, resp = self.m_hccapi.register_domain_token(tok["domain_token"])
         self.assertIsInstance(info, dict)
         self.assertIsInstance(resp, hccapi.APIResult)
 
@@ -187,8 +219,10 @@ class TestCLI(TestHCCAPICommon):
         p.start()
         self.addCleanup(p.stop)
 
-        p = mock.patch.object(hccapi.HCCAPI, "_submit_idm_api", autospec=True)
-        self.m_submit_idm_api = p.start()
+        p = mock.patch.object(
+            hccapi.HCCAPI, "_submit_idmsvc_api", autospec=True
+        )
+        self.m_submit_idmsvc_api = p.start()
         self.addCleanup(p.stop)
 
         p = mock.patch("os.geteuid")
@@ -217,8 +251,8 @@ class TestCLI(TestHCCAPICommon):
         )
         self.assertEqual(out.strip(), "IPA is not configured on this system.")
 
-    def test_cli_register(self):
-        self.m_submit_idm_api.return_value = self.mkresponse(
+    def test_cli_register_old(self):
+        self.m_submit_idmsvc_api.return_value = self.mkresponse(
             200, DOMAIN_RESULT
         )
         out = self.assert_cli_run(
@@ -226,15 +260,25 @@ class TestCLI(TestHCCAPICommon):
         )
         self.assertIn("Successfully registered domain", out)
 
+    def test_cli_register_token(self):
+        self.m_submit_idmsvc_api.return_value = self.mkresponse(
+            200, DOMAIN_RESULT
+        )
+        tok = self.gen_domain_reg_token()
+        out = self.assert_cli_run(
+            "register-token", "--unattended", tok["domain_token"]
+        )
+        self.assertIn("Successfully registered domain", out)
+
     def test_cli_update(self):
-        self.m_submit_idm_api.return_value = self.mkresponse(
+        self.m_submit_idmsvc_api.return_value = self.mkresponse(
             200, DOMAIN_RESULT
         )
         out = self.assert_cli_run("update")
         self.assertIn("Successfully updated domain", out)
 
     def test_cli_status(self):
-        self.m_submit_idm_api.return_value = self.mkresponse(
+        self.m_submit_idmsvc_api.return_value = self.mkresponse(
             200, STATUS_CHECK_RESULT
         )
         out = self.assert_cli_run("status")
@@ -251,3 +295,14 @@ class TestCLI(TestHCCAPICommon):
             """
             ),
         )
+
+    @unittest.skipUnless(
+        hccplatform.DEVELOPMENT_MODE, "token API is only enabled in dev mode"
+    )
+    def test_domain_reg_token(self):
+        self.m_submit_idmsvc_api.return_value = self.mkresponse(
+            200, DOMAIN_REG_TOKEN_RESULT
+        )
+        out = self.assert_cli_run("token")
+        token = DOMAIN_REG_TOKEN_RESULT["domain_token"]
+        self.assertEqual(out, f"{token}\n")

@@ -16,6 +16,7 @@ import typing
 from time import monotonic as monotonic_time
 
 import requests
+from ipalib import errors
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform, sign
@@ -38,6 +39,15 @@ class Application(JSONWSGIApp):
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
         self.priv_key, self.raw_pub_key = self._load_jwk()
+
+    def before_call(self) -> None:
+        # self._connect_ipa() is called on demand
+        pass
+
+    def after_call(self) -> None:
+        self._disconnect_ipa()
+        # force refresh
+        self._reset_ipa_config()
 
     def _load_jwk(self) -> typing.Tuple[sign.JWKDict, str]:
         if not os.path.isfile(hccplatform.MOCKAPI_PRIV_JWK):
@@ -209,6 +219,18 @@ class Application(JSONWSGIApp):
         self, env: dict, body: dict, inventory_id: str, fqdn: str
     ) -> dict:
         org_id, rhsm_id = self.parse_cert(env)
+
+        if not self._is_connected():
+            self._connect_ipa()
+        if self.domain_id is None:
+            raise HTTPException(
+                400, "domain is not registered (no domain_id in LDAP)"
+            )
+        if self.org_id is not None and org_id != self.org_id:
+            raise HTTPException(
+                400, f"Invalid org_id: {org_id} != {self.org_id}"
+            )
+
         logger.warning(
             "Received host configuration request for "
             "org O=%s, CN=%s, FQDN %s, inventory %s",
@@ -234,12 +256,12 @@ class Application(JSONWSGIApp):
             cert_cn=rhsm_id,
             inventory_id=inventory_id,
             fqdn=fqdn,
-            domain_id=hccplatform.TEST_DOMAIN_ID,
+            domain_id=self.domain_id,
         )
         response = {
             "domain_name": self.api.env.domain,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
-            "domain_id": hccplatform.TEST_DOMAIN_ID,
+            "domain_id": self.domain_id,
             "auto_enrollment_enabled": True,
             "token": tok.serialize(compact=False),
             hccplatform.HCC_DOMAIN_TYPE: {
@@ -254,7 +276,12 @@ class Application(JSONWSGIApp):
 
     @route("POST", "^/domains/token$", schema="DomainRegToken")
     def handle_domain_reg_token(self, env: dict, body: dict) -> dict:
-        # idmscv-backend does not use mTLS auth
+        """Generate a new domain registration token
+
+        The mockapi implementation has different assumptions than
+        idmscv-backend. It uses the org_id from mTLS auth for the token.
+        idmscv-backend does not use mTLS auth.
+        """
         domain_type: str = body["domain_type"]
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException(400, "unsupported domain type")
@@ -271,38 +298,55 @@ class Application(JSONWSGIApp):
         }
         return response
 
+    @route("POST", "^/domains$", schema="IPADomain")
+    def handle_register_domain_token(self, env: dict, body: dict) -> dict:
+        regtok = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
+        if regtok is None:
+            raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
+        org_id, _ = self.parse_cert(env)
+        try:
+            domain_id = domain_token.validate_token(
+                hccplatform.TEST_DOMREG_KEY,
+                hccplatform.HCC_DOMAIN_TYPE,
+                org_id,
+                regtok,
+            )
+        except ValueError as e:
+            raise HTTPException(
+                404, f"invalid X-RH-IDM-Registration-Token: {e}"
+            ) from None
+
+        response = self._handle_domain(env, body, str(domain_id))
+
+        # set hccorgid in global IPA configuration
+        if not self._is_connected():
+            self._is_connected()
+        try:
+            self.api.Command.config_mod(
+                hccorgid=str(org_id),
+            )
+        except errors.EmptyModlist:
+            logger.debug("hccorgid=%s already configured", org_id)
+        else:
+            logger.debug("hccorgid=%s set", org_id)
+
+        return response
+
     @route(
         "PUT",
         "^/domains/(?P<domain_id>[^/]+)/register$",
         schema="IPADomain",
     )
-    def handle_register_domain(
+    def handle_register_domain_old(
         self, env: dict, body: dict, domain_id: str
     ) -> dict:
         logger.info("Register domain %s", domain_id)
+        if domain_id != hccplatform.TEST_DOMAIN_ID:
+            raise HTTPException(400, "unsupported domain id")
         regtok = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
         if regtok is None:
             raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
-        if "." in regtok:
-            # it's a domain registration token
-            org_id, _ = self.parse_cert(env)
-            try:
-                domain_id_tok = domain_token.validate_token(
-                    hccplatform.TEST_DOMREG_KEY,
-                    hccplatform.HCC_DOMAIN_TYPE,
-                    org_id,
-                    regtok,
-                )
-            except ValueError as e:
-                raise HTTPException(
-                    404, f"invalid X-RH-IDM-Registration-Token: {e}"
-                ) from None
-            if domain_id_tok != domain_id:
-                raise HTTPException(
-                    404,
-                    "invalid X-RH-IDM-Registration-Token: domain_id mismatch",
-                )
-        elif regtok != "mockapi":  # noqa: S105
+        if regtok != "mockapi":  # noqa: S105
             raise HTTPException(404, "invalid X-RH-IDM-Registration-Token")
         return self._handle_domain(env, body, domain_id)
 
@@ -326,12 +370,11 @@ class Application(JSONWSGIApp):
             raise HTTPException(400, "unsupported domain name")
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException(400, "unsupported domain type")
-        if domain_id != hccplatform.TEST_DOMAIN_ID:
-            raise HTTPException(400, "unsupported domain id")
 
         # return request value
         body = body.copy()
         body["domain_id"] = domain_id
+        body.setdefault("title", domain_name)
         body.setdefault("auto_enrollment_enabled", True)
         body["signing_keys"] = {
             "keys": [self.raw_pub_key],

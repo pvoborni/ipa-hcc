@@ -78,13 +78,25 @@ def register_callback(result: hccapi.APIResult) -> None:
     print(result.exit_message)
 
 
-parser_register = subparsers.add_parser(
+parser_register_old = subparsers.add_parser(
     "register", help="Register a domain with Hybrid Cloud Console"
 )
-parser_register.set_defaults(callback=register_callback)
-parser_register.add_argument("domain_id", type=uuidtype)
-parser_register.add_argument("token", type=str)
-parser_register.add_argument(
+parser_register_old.set_defaults(callback=register_callback)
+parser_register_old.add_argument("domain_id", type=uuidtype)
+parser_register_old.add_argument("token", type=str)
+parser_register_old.add_argument(
+    "--unattended",
+    "-U",
+    action="store_true",
+    help="Don't prompt for confirmation",
+)
+
+parser_register_token = subparsers.add_parser(
+    "register-token", help="Register a domain with Hybrid Cloud Console"
+)
+parser_register_token.set_defaults(callback=register_callback)
+parser_register_token.add_argument("token", type=str)
+parser_register_token.add_argument(
     "--unattended",
     "-U",
     action="store_true",
@@ -120,6 +132,19 @@ def status_callback(result: hccapi.APIResult) -> None:
 
 parser_status = subparsers.add_parser("status", help="Check status")
 parser_status.set_defaults(callback=status_callback)
+
+if hccplatform.DEVELOPMENT_MODE:
+
+    def token_callback(result: hccapi.APIResult) -> None:
+        j = result.json()
+        if typing.TYPE_CHECKING:
+            assert isinstance(j, dict)
+        print(j["domain_token"])
+
+    parser_token = subparsers.add_parser(
+        "token", help="Get domain registration token from mockapi (dev mode)"
+    )
+    parser_token.set_defaults(callback=token_callback)
 
 
 def main(args=None):
@@ -157,11 +182,25 @@ def main(args=None):
                     do_it = confirm_register(result)
                 if not do_it:
                     parser.exit(status=0, message="Registration cancelled\n")
-                _, result = api.register_domain(args.domain_id, args.token)
+                _, result = api.register_domain_old(
+                    args.domain_id, args.token
+                )
+            elif args.action == "register-token":
+                if not args.unattended and sys.stdin.isatty():
+                    # print summary and ask for confirmation
+                    _, result = api.status_check()
+                    do_it = confirm_register(result)
+                    if not do_it:
+                        parser.exit(
+                            status=0, message="Registration cancelled\n"
+                        )
+                _, result = api.register_domain_token(args.token)
             elif args.action == "update":
                 _, result = api.update_domain(args.update_server_only)
             elif args.action == "status":
                 _, result = api.status_check()
+            elif hccplatform.DEVELOPMENT_MODE and args.action == "token":
+                _, result = api.domain_reg_token()
             else:  # pragma: no cover
                 raise ValueError(args.action)
         except hccapi.APIError as e:
