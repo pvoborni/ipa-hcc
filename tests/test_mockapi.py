@@ -55,19 +55,16 @@ PRIV_KEY = sign.generate_private_key()
 PUB_KEY = sign.get_public_key(PRIV_KEY)
 
 
-class TestMockAPIWSGI(conftest.IPABaseTests):
-    def setUp(self):
-        super().setUp()
-        self.m_api = mock.Mock()
-        self.m_api.isdone.return_value = True
-        self.m_api.env = self.get_mock_env()
+class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
+    wsgi_class = wsgi.Application
 
+    def setUp(self):
         p = mock.patch.object(wsgi.Application, "_load_jwk")
         self.m_load_jwk = p.start()
         self.m_load_jwk.return_value = (PRIV_KEY, PUB_KEY.export_public())
         self.addCleanup(p.stop)
 
-        self.app = wsgi.Application(self.m_api)
+        super().setUp()
 
         p = mock.patch.object(self.app, "session")
         self.m_session = p.start()

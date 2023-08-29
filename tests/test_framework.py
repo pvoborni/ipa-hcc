@@ -30,13 +30,13 @@ class Application(JSONWSGIApp):
         return {}
 
 
-class TestWSGIFramework(conftest.IPABaseTests):
+class TestWSGIFramework(conftest.IPAWSGIBaseTests):
     maxDiff = None
+
+    wsgi_class = Application
 
     def setUp(self):
         super().setUp()
-        self.m_api = mock.Mock()
-        self.app = Application(self.m_api)
         p = mock.patch.object(APIResult, "genrid")
         self.m_genrid = p.start()
         self.m_genrid.return_value = "rid"

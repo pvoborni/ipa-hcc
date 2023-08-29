@@ -6,9 +6,6 @@
 
 import logging
 import os
-import typing
-
-import gssapi
 
 from ipahcc import hccplatform
 
@@ -36,55 +33,14 @@ logger.setLevel(logging.DEBUG)
 class Application(JSONWSGIApp):
     def __init__(self, api=None) -> None:
         super().__init__(api=api)
-        # cached org_id from IPA config_show
-        self._org_id: typing.Optional[str] = None
-        self._domain_id: typing.Optional[str] = None
         # cached PEM bundle
         self._kdc_cabundle = read_cert_dir(hccplatform.HCC_CACERTS_DIR)
 
-    def kinit_gssproxy(self) -> gssapi.Credentials:
-        service = hccplatform.HCC_ENROLLMENT_AGENT
-        principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
-        name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
-        store = {"ccache": hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME}
-        return gssapi.Credentials(
-            name=name, store=store, usage="initiate"  # type: ignore
-        )
-
     def before_call(self) -> None:
-        logger.debug("Connecting to IPA")
-        self.kinit_gssproxy()
-        if not self.api.isdone("finalize"):
-            self.api.finalize()
-        if not self.api.Backend.rpcclient.isconnected():
-            self.api.Backend.rpcclient.connect()
-            logger.debug("Connected")
-        else:
-            logger.debug("IPA rpcclient is already connected.")
+        self._connect_ipa()
 
     def after_call(self) -> None:
-        if (
-            self.api.isdone("finalize")
-            and self.api.Backend.rpcclient.isconnected()
-        ):
-            self.api.Backend.rpcclient.disconnect()
-
-    def _get_ipa_config(self) -> typing.Tuple[str, str]:
-        """Get org_id and domain_id from IPA config"""
-        # no need to fetch additional values
-        result = self.api.Command.config_show(raw=True)["result"]
-        org_ids = result.get("hccorgid")
-        if not org_ids or len(org_ids) != 1:
-            raise ValueError(
-                "Invalid IPA configuration, 'hccorgid' is not set."
-            )
-        domain_ids = result.get("hccdomainid")
-        if not domain_ids or len(domain_ids) != 1:
-            raise ValueError(
-                "Invalid IPA configuration, 'hccdomainid' is not set."
-            )
-
-        return org_ids[0], domain_ids[0]
+        self._disconnect_ipa()
 
     def _load_pub_jwk(self):
         """Get JWKs from LDAP
@@ -96,18 +52,6 @@ class Application(JSONWSGIApp):
         with open(hccplatform.MOCKAPI_PUB_JWK, "r", encoding="utf-8") as f:
             pub_key = sign.load_key(f.read())
         return pub_key
-
-    @property
-    def org_id(self) -> str:
-        if self._org_id is None:
-            self._org_id, self._domain_id = self._get_ipa_config()
-        return self._org_id
-
-    @property
-    def domain_id(self) -> str:
-        if self._domain_id is None:
-            self._org_id, self._domain_id = self._get_ipa_config()
-        return self._domain_id
 
     def validate_token(
         self, raw_token: str, inventory_id: str, rhsm_id: str, fqdn: str

@@ -14,6 +14,8 @@ import traceback
 import typing
 from http.client import responses as http_responses
 
+import gssapi
+
 from ipahcc import hccplatform
 from ipahcc.server.hccapi import APIResult
 from ipahcc.server.schema import ValidationError, validate_schema
@@ -74,6 +76,10 @@ class JSONWSGIApp:
         if not self.api.isdone("bootstrap"):
             self.api.bootstrap(in_server=False)
         self.routes = self._get_routes()
+
+        # cached org_id from IPA config_show
+        self._org_id: typing.Optional[str] = None
+        self._domain_id: typing.Optional[str] = None
 
     def _get_routes(self) -> typing.List[typing.Tuple["re.Pattern", dict]]:
         """Inspect class and get a list of routes"""
@@ -181,6 +187,81 @@ class JSONWSGIApp:
             return parse_rhsm_cert(cert_pem)
         except ValueError as e:
             raise HTTPException(400, str(e)) from None
+
+    def _kinit_gssproxy(self) -> gssapi.Credentials:
+        """Perform Kerberos authentication / refresh"""
+        service = hccplatform.HCC_ENROLLMENT_AGENT
+        principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
+        name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
+        store = {"ccache": hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME}
+        return gssapi.Credentials(
+            name=name, store=store, usage="initiate"  # type: ignore
+        )
+
+    def _is_connected(self) -> bool:
+        """Check whether IPA API is connected"""
+        return (
+            self.api.isdone("finalize")
+            and self.api.Backend.rpcclient.isconnected()
+        )
+
+    def _connect_ipa(self) -> None:
+        logger.debug("Connecting to IPA")
+        self._kinit_gssproxy()
+        if not self.api.isdone("finalize"):
+            self.api.finalize()
+        if not self._is_connected():
+            self.api.Backend.rpcclient.connect()
+            logger.debug("Connected")
+        else:
+            logger.debug("IPA rpcclient is already connected.")
+
+    def _disconnect_ipa(self) -> None:
+        if self._is_connected():
+            self.api.Backend.rpcclient.disconnect()
+
+    def _get_ipa_config(self) -> typing.Tuple[str, str]:
+        """Get org_id and domain_id from IPA config"""
+        # automatically connect i
+        connected = self._is_connected()
+        if not connected:
+            self._connect_ipa()
+        try:
+            # no need to fetch additional values
+            result = self.api.Command.config_show(raw=True)["result"]
+            org_ids = result.get("hccorgid")
+            if not org_ids or len(org_ids) != 1:
+                raise ValueError(
+                    "Invalid IPA configuration, 'hccorgid' is not set."
+                )
+            domain_ids = result.get("hccdomainid")
+            if not domain_ids or len(domain_ids) != 1:
+                raise ValueError(
+                    "Invalid IPA configuration, 'hccdomainid' is not set."
+                )
+            return org_ids[0], domain_ids[0]
+        finally:
+            if not connected:
+                self._disconnect_ipa()
+
+    def _reset_ipa_config(self) -> None:
+        """Clear cached org and domain id"""
+        self._org_id = None
+        self._domain_id = None
+
+    @property
+    def org_id(self) -> str:
+        """Get organization id from LDAP (cached)"""
+        if self._org_id is None:
+            self._org_id, self._domain_id = self._get_ipa_config()
+        return self._org_id
+
+    @property
+    def domain_id(self) -> str:
+        """Get domain uuid from LDAP (cached)"""
+        if self._domain_id is None:
+            self._org_id, self._domain_id = self._get_ipa_config()
+        return self._domain_id
 
     def __call__(
         self, env: dict, start_response: typing.Callable

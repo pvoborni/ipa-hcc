@@ -12,6 +12,7 @@ import unittest
 from http.client import responses as http_responses
 from unittest import mock
 
+import gssapi
 from ipalib import api
 from ipalib.x509 import load_pem_x509_certificate
 from ipaplatform.paths import paths
@@ -108,8 +109,6 @@ class CaptureHandler(logging.Handler):
 class IPABaseTests(unittest.TestCase):
     maxDiff = None
 
-    app: typing.Any
-
     def log_capture_start(self):
         self.log_capture = CaptureHandler()
         self.log_capture.setFormatter(
@@ -173,6 +172,59 @@ class IPABaseTests(unittest.TestCase):
         resp.raw.seek(0)
         return resp
 
+    def assert_response(
+        self,
+        expected_code: int,
+        status_code: int,
+        status_msg: str,
+        headers: dict,
+        response: dict,
+    ):
+        if expected_code != status_code:
+            # extend error message with log output
+            msg = [response]
+            msg.extend(self.get_logs())
+            self.assertEqual(status_code, 200, msg)
+        self.assertEqual(status_msg, http_responses[status_code])
+        self.assertEqual(headers["Content-Type"], "application/json")
+
+    def assert_cli_run(self, mainfunc, *args, **kwargs):
+        try:
+            with capture_output() as out:
+                mainfunc(list(args))
+        except SystemExit as e:
+            self.assertEqual(e.code, kwargs.get("exitcode", 0))
+        else:  # pragma: no cover
+            self.fail("SystemExit expected")
+        return out.read()
+
+    def assert_log_entry(self, msg):
+        self.assertIn(msg, self.get_logs())
+
+
+class IPAWSGIBaseTests(IPABaseTests):
+    app: typing.Any
+
+    wsgi_class: typing.Any
+
+    def setUp(self):
+        super().setUp()
+        self.m_api = mock.Mock()
+        self.m_api.env = self.get_mock_env()
+        self.m_api.isdone.return_value = False
+        self.m_api.Command.config_show.return_value = {
+            "result": {
+                "hccdomainid": (DOMAIN_ID,),
+                "hccorgid": (ORG_ID,),
+            }
+        }
+
+        self.app = self.wsgi_class(self.m_api)
+
+        p = mock.patch.object(gssapi, "Credentials")
+        self.m_gss_credentials = p.start()
+        self.addCleanup(p.stop)
+
     def call_wsgi(
         self,
         path,
@@ -214,35 +266,6 @@ class IPABaseTests(unittest.TestCase):
         if headers["Content-Type"] == "application/json":
             response = json.loads(b"".join(response).decode("utf-8"))
         return status_code, status_msg, headers, response
-
-    def assert_response(
-        self,
-        expected_code: int,
-        status_code: int,
-        status_msg: str,
-        headers: dict,
-        response: dict,
-    ):
-        if expected_code != status_code:
-            # extend error message with log output
-            msg = [response]
-            msg.extend(self.get_logs())
-            self.assertEqual(status_code, 200, msg)
-        self.assertEqual(status_msg, http_responses[status_code])
-        self.assertEqual(headers["Content-Type"], "application/json")
-
-    def assert_cli_run(self, mainfunc, *args, **kwargs):
-        try:
-            with capture_output() as out:
-                mainfunc(list(args))
-        except SystemExit as e:
-            self.assertEqual(e.code, kwargs.get("exitcode", 0))
-        else:  # pragma: no cover
-            self.fail("SystemExit expected")
-        return out.read()
-
-    def assert_log_entry(self, msg):
-        self.assertIn(msg, self.get_logs())
 
 
 @contextlib.contextmanager

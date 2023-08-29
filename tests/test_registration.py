@@ -1,8 +1,6 @@
 import json
 from unittest import mock
 
-import gssapi
-
 import conftest
 from ipahcc import hccplatform, sign
 from ipahcc.registration import wsgi
@@ -11,28 +9,15 @@ PRIV_KEY = sign.generate_private_key()
 PUB_KEY = sign.get_public_key(PRIV_KEY)
 
 
-class TestRegistrationWSGI(conftest.IPABaseTests):
+class TestRegistrationWSGI(conftest.IPAWSGIBaseTests):
+    wsgi_class = wsgi.Application
+
     def setUp(self):
         super().setUp()
-        self.m_api = mock.Mock()
-        self.m_api.env = self.get_mock_env()
-        self.m_api.isdone.return_value = False
-        self.m_api.Command.config_show.return_value = {
-            "result": {
-                "hccdomainid": (conftest.DOMAIN_ID,),
-                "hccorgid": (conftest.ORG_ID,),
-            }
-        }
 
-        p = mock.patch.object(wsgi.Application, "_load_pub_jwk")
+        p = mock.patch.object(self.app, "_load_pub_jwk")
         self.m_load_jwk = p.start()
         self.m_load_jwk.return_value = PUB_KEY
-        self.addCleanup(p.stop)
-
-        self.app = wsgi.Application(self.m_api)
-
-        p = mock.patch.object(gssapi, "Credentials")
-        self.m_gss_credentials = p.start()
         self.addCleanup(p.stop)
 
     def test_ipaapi(self):

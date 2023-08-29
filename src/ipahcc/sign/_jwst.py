@@ -121,7 +121,7 @@ class MultiJWST(jwt.JWT):
         self,
         # pylint: disable=arguments-renamed
         tok: str,
-        key=typing.Union[JWKDict, JWKSet]
+        key=typing.Union[JWKDict, JWKSet],
     ) -> None:
         """Deserialize a JWT JSON token.
 
