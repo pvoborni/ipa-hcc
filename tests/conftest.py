@@ -211,7 +211,7 @@ class IPAWSGIBaseTests(IPABaseTests):
         super().setUp()
         self.m_api = mock.Mock()
         self.m_api.env = self.get_mock_env()
-        self.m_api.isdone.return_value = False
+        self.m_api.isdone.return_value = True
         self.m_api.Command.config_show.return_value = {
             "result": {
                 "hccdomainid": (DOMAIN_ID,),

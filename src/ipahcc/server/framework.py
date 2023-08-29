@@ -16,6 +16,7 @@ import typing
 from http.client import responses as http_responses
 
 import gssapi
+import ipalib
 
 from ipahcc import hccplatform
 from ipahcc.server.hccapi import APIResult
@@ -49,6 +50,30 @@ def route(method, path, schema=None):
     return inner
 
 
+def patch_user_cache(api, cachepath):
+    """FreeIPA does not have an API option to set cache path
+
+    Cache path can be set with "XDG_CACHE_HOME" env *before* the first
+    IPA module is imported. The patch function allows us to override the
+    settings at a later point.
+    """
+    if not api.isdone("bootstrap"):
+        # ipaclient.plugins.rpcclient defines rpcclient after IPA API is
+        # bootstrapped and has RPC schema set.
+        raise ValueError("Patching requires bootstrapped API")
+
+    # pylint: disable=import-outside-toplevel, protected-access
+    from ipaclient.remote_plugins import ServerInfo, schema
+    from ipalib import constants
+
+    constants.USER_CACHE_PATH = cachepath
+    ServerInfo._DIR = os.path.join(cachepath, "ipa", "servers")
+    schema.Schema._DIR = os.path.join(
+        cachepath, "ipa", "schema", schema.FORMAT
+    )
+    # _KraConfigCache is not used by ipa-hcc
+
+
 class JSONWSGIApp:
     """Trivial, opinionated WSGI framework for REST-like JSON API
 
@@ -69,13 +94,17 @@ class JSONWSGIApp:
 
     def __init__(self, api=None):
         if api is None:  # pragma: no cover
-            import ipalib  # pylint: disable=import-outside-toplevel
-
             self.api = ipalib.api
         else:
             self.api = api
         if not self.api.isdone("bootstrap"):
             self.api.bootstrap(in_server=False)
+
+        patch_user_cache(
+            api=self.api,
+            cachepath=hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR,
+        )
+
         self.routes = self._get_routes()
 
         # cached org_id from IPA config_show

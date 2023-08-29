@@ -24,13 +24,14 @@ class TestRegistrationWSGI(conftest.IPAWSGIBaseTests):
         app = self.app
         api = self.m_api
 
+        api.isdone.return_value = False
         api.Backend.rpcclient.isconnected.return_value = False
         app.before_call()
         self.m_gss_credentials.assert_called_once()
         api.finalize.assert_called()
         api.Backend.rpcclient.connect.assert_called_once()
 
-        self.m_api.isdone.return_value = True
+        api.isdone.return_value = True
         api.Backend.rpcclient.isconnected.return_value = True
         app.after_call()
         api.Backend.rpcclient.disconnect.assert_called_once()

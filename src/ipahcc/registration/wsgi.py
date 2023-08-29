@@ -5,23 +5,16 @@
 #
 
 import logging
-import os
 
-from ipahcc import hccplatform
+from ipalib import errors
 
-# must be set before ipalib or ipapython is imported
-os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR
-
-# pylint: disable=wrong-import-position,wrong-import-order,ungrouped-imports
-from ipalib import errors  # noqa: E402
-
-from ipahcc import sign  # noqa: E402
-from ipahcc.server.framework import (  # noqa: E402
+from ipahcc import hccplatform, sign
+from ipahcc.server.framework import (
     HTTPException,
     JSONWSGIApp,
     route,
 )
-from ipahcc.server.util import read_cert_dir  # noqa: E402
+from ipahcc.server.util import read_cert_dir
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")
