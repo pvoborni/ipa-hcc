@@ -83,8 +83,9 @@ class TestJSONSchema(conftest.IPABaseTests):
         with self.assertRaises(schema.ValidationError):
             schema.validate_schema(instance, "HostRegisterRequest")
 
-    def test_domain_request(self):
+    def test_domain_get(self):
         instance = {
+            "domain_id": hccplatform.TEST_DOMAIN_ID,
             "domain_name": conftest.DOMAIN,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             hccplatform.HCC_DOMAIN_TYPE: {
@@ -127,7 +128,7 @@ class TestJSONSchema(conftest.IPABaseTests):
                 ],
             },
         }
-        schema.validate_schema(instance, "IPADomainRequest")
+        schema.validate_schema(instance, "IPADomainGetResponse")
 
 
 class TestUtil(IPAClientTests):

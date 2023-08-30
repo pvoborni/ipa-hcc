@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Root Type for DomainRequest",
+  "description": "A domain resource",
+  "type": "object",
+  "required": [
+    "domain_name",
+    "domain_type",
+    "rhel-idm"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "domain_name": {
+      "$ref": "defs.json#/$defs/DomainName"
+    },
+    "domain_type": {
+      "$ref": "defs.json#/$defs/DomainType"
+    },
+    "rhel-idm": {
+      "$ref": "defs.json#/$defs/RhelIdmDomain"
+    }
+  }
+}

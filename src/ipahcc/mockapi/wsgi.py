@@ -20,7 +20,7 @@ from ipalib import errors
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform, sign
-from ipahcc.server.framework import HTTPException, JSONWSGIApp, route
+from ipahcc.server.framework import UUID_RE, HTTPException, JSONWSGIApp, route
 
 from . import domain_token
 
@@ -212,7 +212,7 @@ class Application(JSONWSGIApp):
 
     @route(
         "POST",
-        "^/host-conf/(?P<inventory_id>[^/]+)/(?P<fqdn>[^/]+)$",
+        f"^/host-conf/(?P<inventory_id>{UUID_RE})/(?P<fqdn>[^/]+)$",
         schema="HostConf",
     )
     def handle_host_conf(  # pylint: disable=unused-argument
@@ -334,8 +334,8 @@ class Application(JSONWSGIApp):
 
     @route(
         "PUT",
-        "^/domains/(?P<domain_id>[^/]+)/register$",
-        schema="IPADomain",
+        f"^/domains/(?P<domain_id>{UUID_RE})$",
+        schema="IPADomainRegister",
     )
     def handle_register_domain_old(
         self, env: dict, body: dict, domain_id: str
@@ -348,36 +348,39 @@ class Application(JSONWSGIApp):
             raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
         if regtok != "mockapi":  # noqa: S105
             raise HTTPException(404, "invalid X-RH-IDM-Registration-Token")
-        return self._handle_domain(env, body, domain_id)
+        self._check_domain(body, domain_id)
+        return {
+            "domain_id": domain_id,
+            "signing_keys": {
+                "keys": [self.raw_pub_key],
+                "revoked_kids": ["bad key id"],
+            },
+        }
 
     @route(
         "PUT",
-        "^/domains/(?P<domain_id>[^/]+)/update$",
-        schema="IPADomain",
+        "^/domains/(?P<domain_id>[^/]+)/agent$",
+        schema="IPADomainUpdate",
     )
     def handle_update_domain(
-        self, env: dict, body: dict, domain_id: str
+        self, env: dict, body: dict, domain_id: str  # pylint: disable=unused-argument
     ) -> dict:
         logger.info("Update domain %s", domain_id)
-        return self._handle_domain(env, body, domain_id)
+        self._check_domain(body, domain_id)
+        return {
+            "auto_enrollment_enabled": True,
+            "signing_keys": {
+                "keys": [self.raw_pub_key],
+                "revoked_kids": ["bad key id"],
+            },
+        }
 
-    def _handle_domain(  # pylint: disable=unused-argument
-        self, env: dict, body: dict, domain_id: str
-    ) -> dict:
+    def _check_domain(self, body: dict, domain_id: str) -> None:
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
         if domain_name != self.api.env.domain:
             raise HTTPException(400, "unsupported domain name")
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException(400, "unsupported domain type")
-
-        # return request value
-        body = body.copy()
-        body["domain_id"] = domain_id
-        body.setdefault("title", domain_name)
-        body.setdefault("auto_enrollment_enabled", True)
-        body["signing_keys"] = {
-            "keys": [self.raw_pub_key],
-            "revoked_kids": ["bad key id"],
-        }
-        return body
+        if domain_id != hccplatform.TEST_DOMAIN_ID:
+            raise HTTPException(400, "unsupported domain id")

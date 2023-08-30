@@ -74,6 +74,9 @@ def patch_user_cache(api, cachepath):
     # _KraConfigCache is not used by ipa-hcc
 
 
+UUID_RE = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+
+
 class JSONWSGIApp:
     """Trivial, opinionated WSGI framework for REST-like JSON API
 

@@ -38,7 +38,9 @@ def generate_token(
     return token, expires
 
 
-def _generate_token_ns(key: bytes, domain_type: str, org_id: str, expires: int) -> str:
+def _generate_token_ns(
+    key: bytes, domain_type: str, org_id: str, expires: int
+) -> str:
     payload_bytes = expires.to_bytes(8, "big")
     payload_b64 = _b64encode(payload_bytes)
     sig = _mac_digest(key, domain_type, org_id, payload_bytes)
@@ -46,7 +48,9 @@ def _generate_token_ns(key: bytes, domain_type: str, org_id: str, expires: int) 
     return f"{payload_b64}.{sig_b64}"
 
 
-def validate_token(key: bytes, domain_type: str, org_id: str, token: str) -> uuid.UUID:
+def validate_token(
+    key: bytes, domain_type: str, org_id: str, token: str
+) -> uuid.UUID:
     """Validate a domain registration token"""
     expires = _validate_token_sig(key, domain_type, org_id, token)
     if _time_ns() > expires:
@@ -54,7 +58,9 @@ def validate_token(key: bytes, domain_type: str, org_id: str, token: str) -> uui
     return token_domain_id(token)
 
 
-def _validate_token_sig(key: bytes, domain_type: str, org_id: str, token: str) -> int:
+def _validate_token_sig(
+    key: bytes, domain_type: str, org_id: str, token: str
+) -> int:
     payload_b64, sig_b64 = token.split(".")
     payload_bytes = _b64decode(payload_b64)
     sig = _b64decode(sig_b64)

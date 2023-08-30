@@ -70,13 +70,13 @@ cleanall: clean clean-idm-ci
 $(OPENAPI_YAML):
 	git submodule update --init
 
-ipahcc/server/schema/%.json: contrib/convert_schema.py $(OPENAPI_YAML)
+src/ipahcc/server/schema/%.json: contrib/convert_schema.py $(OPENAPI_YAML)
 	contrib/convert_schema.py
 
 .PHONY: generate-api
 generate-api:
-	rm -f ipahcc/server/schema/*.json
-	$(MAKE) ipahcc/server/schema/defs.json
+	rm -f src/ipahcc/server/schema/*.json
+	$(MAKE) src/ipahcc/server/schema/defs.json
 
 .PHONY: update-api
 update-api:

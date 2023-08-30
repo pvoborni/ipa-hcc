@@ -5,6 +5,7 @@ import pathlib
 import sys
 
 import yaml
+from jsonschema.validators import validator_for
 
 BASEDIR = pathlib.Path(__file__).absolute().parent.parent
 # OpenAPI files are in a separate repository which is included as a
@@ -51,32 +52,6 @@ HOST_REGISTER_RESPONSE = {
     },
 }
 
-IPA_DOMAIN_REQUEST = {
-    "$schema": DRAFT_04_URI,
-    "title": "Domain registration/update request",
-    "description": (
-        "Request from an RHEL IdM server to HCC API to "
-        "register or update a domain."
-    ),
-    "type": "object",
-    "required": [
-        "domain_type",
-        "domain_name",
-        "rhel-idm",
-    ],
-    "additionalProperties": False,
-    "properties": {
-        "title": {"type": "string"},
-        "description": {"type": "string"},
-        "auto_enrollment_enabled": {"type": "boolean", "default": True},
-        "domain_type": {"$ref": "defs.json#/$defs/DomainType"},
-        "domain_name": {"$ref": "defs.json#/$defs/DomainName"},
-        "rhel-idm": {
-            "$ref": "defs.json#/$defs/RhelIdmDomain",
-        },
-    },
-}
-
 
 def read_openapi(filename: os.PathLike = OPENAPI_YAML) -> dict:
     with open(filename, "r", encoding="utf-8") as f:
@@ -101,6 +76,11 @@ def fixup_ref(obj, refmap: dict, prefix: str = ""):
 
 
 def extract_openapi(oapi: dict) -> dict:
+    """Extract schema parts that are marked with x-rh-ipa-hcc
+
+    type: one of: defs, request, response
+    name: override name
+    """
     defs = {}
     results = {}
     refmap = {}
@@ -140,11 +120,12 @@ def main():
         {
             "HostRegisterRequest": HOST_REGISTER_REQUEST,
             "HostRegisterResponse": HOST_REGISTER_RESPONSE,
-            "IPADomainRequest": IPA_DOMAIN_REQUEST,
         }
     )
     for name, schema in results.items():
         filename = SCHEMATA[name]
+        cls = validator_for(schema)
+        cls.check_schema(schema)
         with open(SCHEMA_DIR / filename, "w", encoding="utf-8") as f:
             json.dump(schema, f, indent=2)
             f.write("\n")

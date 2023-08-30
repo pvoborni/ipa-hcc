@@ -40,24 +40,21 @@ COMMON_RESULT: typing.Dict[str, typing.Any] = {
     },
 }
 
-DOMAIN_RESULT = copy.deepcopy(COMMON_RESULT)
-DOMAIN_RESULT.update(
-    {
-        "title": "Some title",
-        "description": "Some description",
-        "auto_enrollment_enabled": True,
-        "domain_id": conftest.DOMAIN_ID,
-        "signing_keys": {
-            "keys": ["good JWK"],
-            "revoked_kids": ["bad key id"],
-        },
-    }
-)
-DOMAIN_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(
-    {
-        "ca_certs": [conftest.IPA_CA_CERTINFO],
-    }
-)
+DOMAIN_REGISTER_RESULT = {
+    "domain_id": conftest.DOMAIN_ID,
+    "signing_keys": {
+        "keys": ["good JWK"],
+        "revoked_kids": ["bad key id"],
+    },
+}
+
+DOMAIN_UPDATE_RESULT = {
+    "auto_enrollment_enabled": True,
+    "signing_keys": {
+        "keys": ["good JWK"],
+        "revoked_kids": ["bad key id"],
+    },
+}
 
 STATUS_CHECK_RESULT = copy.deepcopy(COMMON_RESULT)
 STATUS_CHECK_RESULT.update(
@@ -173,7 +170,7 @@ class TestHCCAPICommon(conftest.IPABaseTests):
 class TestHCCAPI(TestHCCAPICommon):
     def test_register_domain_old(self):
         self.m_session.request.return_value = self.mkresponse(
-            200, DOMAIN_RESULT
+            200, DOMAIN_REGISTER_RESULT
         )
         info, resp = self.m_hccapi.register_domain_old(
             conftest.DOMAIN_ID, "mockapi"
@@ -192,7 +189,7 @@ class TestHCCAPI(TestHCCAPICommon):
 
     def test_update_domain(self):
         self.m_session.request.return_value = self.mkresponse(
-            200, DOMAIN_RESULT
+            200, DOMAIN_UPDATE_RESULT
         )
         info, resp = self.m_hccapi.update_domain()
         self.assertIsInstance(info, dict)
@@ -262,7 +259,7 @@ class TestCLI(TestHCCAPICommon):
 
     def test_cli_register_token(self):
         self.m_submit_idmsvc_api.return_value = self.mkresponse(
-            200, DOMAIN_RESULT
+            200, DOMAIN_REGISTER_RESULT
         )
         tok = self.gen_domain_reg_token()
         out = self.assert_cli_run(
@@ -272,7 +269,7 @@ class TestCLI(TestHCCAPICommon):
 
     def test_cli_update(self):
         self.m_submit_idmsvc_api.return_value = self.mkresponse(
-            200, DOMAIN_RESULT
+            200, DOMAIN_UPDATE_RESULT
         )
         out = self.assert_cli_run("update")
         self.assertIn("Successfully updated domain", out)

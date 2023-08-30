@@ -55,6 +55,45 @@
         }
       }
     },
+    "DomainBase": {
+      "title": "Base type for domain objects",
+      "description": "A domain resource",
+      "type": "object",
+      "required": [
+        "domain_name",
+        "domain_type",
+        "rhel-idm"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "description": "Title to describe the domain.",
+          "type": "string",
+          "format": "domain-title"
+        },
+        "description": {
+          "description": "Human readable description abou the domain.",
+          "type": "string",
+          "format": "domain-description"
+        },
+        "auto_enrollment_enabled": {
+          "description": "Enable or disable host vm auto-enrollment for this domain",
+          "type": "boolean"
+        },
+        "domain_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "domain_name": {
+          "$ref": "#/$defs/DomainName"
+        },
+        "domain_type": {
+          "$ref": "#/$defs/DomainType"
+        },
+        "rhel-idm": {
+          "$ref": "#/$defs/RhelIdmDomain"
+        }
+      }
+    },
     "DomainId": {
       "title": "domain id",
       "description": "A domain id",
@@ -291,11 +330,6 @@
       "maxLength": 63,
       "minLength": 1,
       "pattern": "^[a-z][a-z0-9\\-]*$"
-    },
-    "OrgId": {
-      "title": "Organization id",
-      "description": "The Org ID of the tenant that owns the host.",
-      "type": "string"
     },
     "RealmName": {
       "title": "Kerberos realm name",

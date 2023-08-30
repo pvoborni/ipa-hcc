@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Response type for domain registration",
+  "description": "TODO",
+  "type": "object",
+  "required": [
+    "domain_id",
+    "signing_keys"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "domain_id": {
+      "$ref": "defs.json#/$defs/DomainId"
+    },
+    "signing_keys": {
+      "$ref": "defs.json#/$defs/SigningKeys"
+    }
+  }
+}

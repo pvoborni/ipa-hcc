@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "title": "Root Type for DomainResponse",
+  "description": "A domain resource",
+  "required": [
+    "domain_id"
+  ],
+  "allOf": [
+    {
+      "$ref": "defs.json#/$defs/DomainBase"
+    }
+  ]
+}
