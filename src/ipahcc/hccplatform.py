@@ -34,13 +34,12 @@ HTTP_HEADERS = {
 }  # type: dict[str, str]
 
 # HCC enrollment agent (part pf ipa-hcc-server-plugin)
-# Note: IPA's gssproxy directory comes with correct SELinux rule.
 HCC_ENROLLMENT_AGENT = "hcc-enrollment"
 HCC_ENROLLMENT_AGENT_USER = "ipahcc"
 HCC_ENROLLMENT_AGENT_GROUP = getattr(constants, "IPAAPI_GROUP", "ipaapi")
 HCC_ENROLLMENT_AGENT_CACHE_DIR = "/var/cache/ipa-hcc"
-HCC_ENROLLMENT_AGENT_KEYTAB = "/var/lib/ipa/gssproxy/hcc-enrollment.keytab"
-HCC_ENROLLMENT_AGENT_KRB5CCNAME = "/var/cache/ipa-hcc/krb5ccname"
+# Note: gssproxy directory comes with correct SELinux roles.
+HCC_ENROLLMENT_AGENT_KEYTAB = "/var/lib/gssproxy/hcc-enrollment.keytab"
 
 HCC_ENROLLMENT_ROLE = "HCC Enrollment Administrators"
 

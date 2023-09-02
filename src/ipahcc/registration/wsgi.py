@@ -11,8 +11,6 @@ from ipahcc import hccplatform
 
 # must be set before ipalib or ipapython is imported
 os.environ["XDG_CACHE_HOME"] = hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR
-os.environ["KRB5CCNAME"] = hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME
-os.environ["GSS_USE_PROXY"] = "1"
 
 # pylint: disable=wrong-import-position,wrong-import-order,ungrouped-imports
 from ipalib import errors  # noqa: E402

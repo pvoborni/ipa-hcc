@@ -229,7 +229,8 @@ export MAKEFLAGS="-j1"
 
 %if %{with server}
 %__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_server_plugin install_registration_service
-touch %{buildroot}%{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
+mkdir -p %{buildroot}%{_sharedstatedir}/gssproxy
+touch %{buildroot}%{_sharedstatedir}/gssproxy/hcc-enrollment.keytab
 %else
 rm -rf %{buildroot}/%{python_sitelib}/ipahcc
 rm -rf %{buildroot}/%{python_sitelib}/ipaserver
@@ -281,7 +282,7 @@ rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
 %{_datadir}/ipa/updates/86-hcc-registration-service.update
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/gssproxy/85-ipa-hcc.conf
-%ghost %{_sharedstatedir}/ipa/gssproxy/hcc-enrollment.keytab
+%ghost %{_sharedstatedir}/gssproxy/hcc-enrollment.keytab
 %endif
 
 

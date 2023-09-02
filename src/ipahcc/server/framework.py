@@ -9,6 +9,7 @@ import collections
 import inspect
 import json
 import logging
+import os
 import re
 import traceback
 import typing
@@ -189,14 +190,21 @@ class JSONWSGIApp:
             raise HTTPException(400, str(e)) from None
 
     def _kinit_gssproxy(self) -> gssapi.Credentials:
-        """Perform Kerberos authentication / refresh"""
-        service = hccplatform.HCC_ENROLLMENT_AGENT
-        principal = f"{service}/{self.api.env.host}@{self.api.env.realm}"
-        name = gssapi.Name(principal, gssapi.NameType.kerberos_principal)
-        store = {"ccache": hccplatform.HCC_ENROLLMENT_AGENT_KRB5CCNAME}
-        return gssapi.Credentials(
-            name=name, store=store, usage="initiate"  # type: ignore
-        )
+        """Perform Kerberos authentication / refresh with gssproxy
+
+        The environ variable `GSS_USE_PROXY` instructs GSSAPI to use gssproxy
+        interposer module to perform heavily lifting for us. gssproxy is
+        configured to map the effective uid of the process to a service
+        with a client keytab.
+
+        The `gssapi.Credentials` call is optional. It's there to check early
+        whether everything is set up correctly.
+        """
+        os.environ["GSS_USE_PROXY"] = "1"
+        # IPA's httpd.conf sets ccache name to a path which is not accessible
+        # by the ipahcc user. NOTE: gssproxy has its own private ccache.
+        os.environ["KRB5CCNAME"] = "MEMORY:"
+        return gssapi.Credentials(usage="initiate")
 
     def _is_connected(self) -> bool:
         """Check whether IPA API is connected"""
