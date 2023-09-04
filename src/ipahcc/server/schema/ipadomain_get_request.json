@@ -7,7 +7,7 @@
   ],
   "allOf": [
     {
-      "$ref": "defs.json#/$defs/DomainBase"
+      "$ref": "defs.json#/$defs/Domain"
     }
   ]
 }

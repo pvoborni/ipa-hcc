@@ -242,42 +242,10 @@ class HCCAPI:
     def __exit__(self, exc_type, exc_value, traceback):
         self.api.Backend.ldap2.disconnect()
 
-    def register_domain_old(
-        self, domain_id: str, token: str
-    ) -> typing.Tuple[dict, APIResult]:
+    def register_domain(self, token: str) -> typing.Tuple[dict, APIResult]:
         config = self._get_ipa_config(all_fields=True)
         info = self._get_ipa_info(config)
         schema.validate_schema(info, "IPADomainRegisterRequest")
-        extra_headers = {
-            "X-RH-IDM-Registration-Token": token,
-        }
-        resp = self._submit_idmsvc_api(
-            method="POST",
-            subpath=("domains", domain_id),
-            payload=info,
-            extra_headers=extra_headers,
-        )
-        schema.validate_schema(resp.json(), "IPADomainRegisterResponse")
-        # update after successful registration
-        try:
-            self.api.Command.config_mod(hccdomainid=str(domain_id))
-        except errors.EmptyModlist:
-            logger.debug("hccdomainid=%s already configured", domain_id)
-        else:
-            logger.debug("hccdomainid=%s set", domain_id)
-        msg = (
-            f"Successfully registered domain '{info['domain_name']}' "
-            f"with Hybrid Cloud Console (id: {domain_id})."
-        )
-        result = APIResult.from_response(resp, 0, msg)
-        return info, result
-
-    def register_domain_token(
-        self, token: str
-    ) -> typing.Tuple[dict, APIResult]:
-        config = self._get_ipa_config(all_fields=True)
-        info = self._get_ipa_info(config)
-        schema.validate_schema(info, "IPADomainRequest")
         extra_headers = {
             "X-RH-IDM-Registration-Token": token,
         }
@@ -288,7 +256,7 @@ class HCCAPI:
             extra_headers=extra_headers,
         )
         response = resp.json()
-        schema.validate_schema(response, "IPADomainResponse")
+        schema.validate_schema(response, "IPADomainRegisterResponse")
         domain_id = response["domain_id"]
         # update after successful registration
         try:
@@ -328,8 +296,11 @@ class HCCAPI:
         info = self._get_ipa_info(config)
         schema.validate_schema(info, "IPADomainUpdateRequest")
         resp = self._submit_idmsvc_api(
-            method="POST",
-            subpath=("domains", domain_id, "agent"),
+            method="PUT",
+            subpath=(
+                "domains",
+                domain_id,
+            ),
             payload=info,
             extra_headers=None,
         )

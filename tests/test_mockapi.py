@@ -1,11 +1,8 @@
-import copy
 import time
 import typing
 import unittest
 import uuid
 from unittest import mock
-
-from test_hccapi import DOMAIN_REGISTER_RESULT, DOMAIN_UPDATE_RESULT
 
 import conftest
 from ipahcc import hccplatform, sign
@@ -159,61 +156,49 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
         tok_expires = int(tok_expires_ns / 1_000_000_000)
         self.assertEqual(expires, tok_expires)
 
-    def test_register_domain_token(self):
+    def test_register_domain(self):
         tok = self.get_domain_reg_token()
         path = "/domains"
         status_code, status_msg, headers, response = self.call_wsgi(
             path,
-            domain_request,
+            DOMAIN_REQUEST,
             method="POST",
             extra_headers={
                 "X-RH-IDM-Registration-Token": tok["domain_token"],
             },
         )
         self.assert_response(200, status_code, status_msg, headers, response)
-        expected: typing.Dict[str, typing.Any] = copy.deepcopy(domain_request)
-        expected.update(
-            auto_enrollment_enabled=True,
-            domain_id=tok["domain_id"],
-            signing_keys={
+        expected = {
+            "domain_id": tok["domain_id"],
+            "signing_keys": {
                 "keys": [self.app.raw_pub_key],
                 "revoked_kids": ["bad key id"],
             },
-        )
+        }
         self.assertEqual(response, expected)
         self.m_api.Command.config_mod.assert_called_with(
             hccorgid=conftest.ORG_ID
         )
 
-    def test_register_domain_old(self):
-        path = "/".join(("", "domains", conftest.DOMAIN_ID, "register"))
-        status_code, status_msg, headers, response = self.call_wsgi(
-            path,
-            DOMAIN_REQUEST,
-            method="PUT",
-            extra_headers={
-                "X-RH-IDM-Registration-Token": "mockapi",
-            },
-        )
-        self.assert_response(200, status_code, status_msg, headers, response)
-        expected = copy.deepcopy(DOMAIN_REGISTER_RESULT)
-        expected["signing_keys"] = {
-            "keys": [self.app.raw_pub_key],
-            "revoked_kids": ["bad key id"],
-        }
-        self.assertEqual(response, expected)
-
     def test_update_domain(self):
-        path = "/".join(("", "domains", conftest.DOMAIN_ID, "agent"))
+        path = "/".join(
+            (
+                "",
+                "domains",
+                conftest.DOMAIN_ID,
+            )
+        )
         status_code, status_msg, headers, response = self.call_wsgi(
             path, DOMAIN_REQUEST, method="PUT"
         )
 
         self.assert_response(200, status_code, status_msg, headers, response)
-        expected = copy.deepcopy(DOMAIN_UPDATE_RESULT)
-        expected["signing_keys"] = {
-            "keys": [self.app.raw_pub_key],
-            "revoked_kids": ["bad key id"],
+        expected = {
+            "auto_enrollment_enabled": True,
+            "signing_keys": {
+                "keys": [self.app.raw_pub_key],
+                "revoked_kids": ["bad key id"],
+            },
         }
         self.assertEqual(response, expected)
 

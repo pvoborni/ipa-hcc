@@ -168,22 +168,12 @@ class TestHCCAPICommon(conftest.IPABaseTests):
 
 
 class TestHCCAPI(TestHCCAPICommon):
-    def test_register_domain_old(self):
+    def test_register_domain(self):
+        tok = self.gen_domain_reg_token()
         self.m_session.request.return_value = self.mkresponse(
             200, DOMAIN_REGISTER_RESULT
         )
-        info, resp = self.m_hccapi.register_domain_old(
-            conftest.DOMAIN_ID, "mockapi"
-        )
-        self.assertIsInstance(info, dict)
-        self.assertIsInstance(resp, hccapi.APIResult)
-
-    def test_register_domain_token(self):
-        tok = self.gen_domain_reg_token()
-        self.m_session.request.return_value = self.mkresponse(
-            200, DOMAIN_RESULT
-        )
-        info, resp = self.m_hccapi.register_domain_token(tok["domain_token"])
+        info, resp = self.m_hccapi.register_domain(tok["domain_token"])
         self.assertIsInstance(info, dict)
         self.assertIsInstance(resp, hccapi.APIResult)
 
@@ -243,27 +233,17 @@ class TestCLI(TestHCCAPICommon):
         out = self.assert_cli_run(
             "register",
             conftest.DOMAIN_ID,
-            "mockapi",
             exitcode=admintool.SERVER_NOT_CONFIGURED,
         )
         self.assertEqual(out.strip(), "IPA is not configured on this system.")
 
-    def test_cli_register_old(self):
-        self.m_submit_idmsvc_api.return_value = self.mkresponse(
-            200, DOMAIN_RESULT
-        )
-        out = self.assert_cli_run(
-            "register", "--unattended", conftest.DOMAIN_ID, "mockapi"
-        )
-        self.assertIn("Successfully registered domain", out)
-
-    def test_cli_register_token(self):
+    def test_cli_register(self):
         self.m_submit_idmsvc_api.return_value = self.mkresponse(
             200, DOMAIN_REGISTER_RESULT
         )
         tok = self.gen_domain_reg_token()
         out = self.assert_cli_run(
-            "register-token", "--unattended", tok["domain_token"]
+            "register", "--unattended", tok["domain_token"]
         )
         self.assertIn("Successfully registered domain", out)
 

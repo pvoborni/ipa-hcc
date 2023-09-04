@@ -298,8 +298,8 @@ class Application(JSONWSGIApp):
         }
         return response
 
-    @route("POST", "^/domains$", schema="IPADomain")
-    def handle_register_domain_token(self, env: dict, body: dict) -> dict:
+    @route("POST", "^/domains$", schema="IPADomainRegister")
+    def handle_register_domain(self, env: dict, body: dict) -> dict:
         regtok = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
         if regtok is None:
             raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
@@ -316,7 +316,14 @@ class Application(JSONWSGIApp):
                 404, f"invalid X-RH-IDM-Registration-Token: {e}"
             ) from None
 
-        response = self._handle_domain(env, body, str(domain_id))
+        self._check_domain(body)
+        response = {
+            "domain_id": str(domain_id),
+            "signing_keys": {
+                "keys": [self.raw_pub_key],
+                "revoked_kids": ["bad key id"],
+            },
+        }
 
         # set hccorgid in global IPA configuration
         if not self._is_connected():
@@ -335,38 +342,16 @@ class Application(JSONWSGIApp):
     @route(
         "PUT",
         f"^/domains/(?P<domain_id>{UUID_RE})$",
-        schema="IPADomainRegister",
-    )
-    def handle_register_domain_old(
-        self, env: dict, body: dict, domain_id: str
-    ) -> dict:
-        logger.info("Register domain %s", domain_id)
-        if domain_id != hccplatform.TEST_DOMAIN_ID:
-            raise HTTPException(400, "unsupported domain id")
-        regtok = env.get("HTTP_X_RH_IDM_REGISTRATION_TOKEN")
-        if regtok is None:
-            raise HTTPException(403, "missing X-RH-IDM-Registration-Token")
-        if regtok != "mockapi":  # noqa: S105
-            raise HTTPException(404, "invalid X-RH-IDM-Registration-Token")
-        self._check_domain(body, domain_id)
-        return {
-            "domain_id": domain_id,
-            "signing_keys": {
-                "keys": [self.raw_pub_key],
-                "revoked_kids": ["bad key id"],
-            },
-        }
-
-    @route(
-        "PUT",
-        "^/domains/(?P<domain_id>[^/]+)/agent$",
         schema="IPADomainUpdate",
     )
     def handle_update_domain(
-        self, env: dict, body: dict, domain_id: str  # pylint: disable=unused-argument
+        self,
+        env: dict,  # pylint: disable=unused-argument
+        body: dict,
+        domain_id: str,
     ) -> dict:
         logger.info("Update domain %s", domain_id)
-        self._check_domain(body, domain_id)
+        self._check_domain(body)
         return {
             "auto_enrollment_enabled": True,
             "signing_keys": {
@@ -375,12 +360,10 @@ class Application(JSONWSGIApp):
             },
         }
 
-    def _check_domain(self, body: dict, domain_id: str) -> None:
+    def _check_domain(self, body: dict) -> None:
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
         if domain_name != self.api.env.domain:
             raise HTTPException(400, "unsupported domain name")
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException(400, "unsupported domain type")
-        if domain_id != hccplatform.TEST_DOMAIN_ID:
-            raise HTTPException(400, "unsupported domain id")

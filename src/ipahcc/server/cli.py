@@ -82,21 +82,8 @@ parser_register_old = subparsers.add_parser(
     "register", help="Register a domain with Hybrid Cloud Console"
 )
 parser_register_old.set_defaults(callback=register_callback)
-parser_register_old.add_argument("domain_id", type=uuidtype)
 parser_register_old.add_argument("token", type=str)
 parser_register_old.add_argument(
-    "--unattended",
-    "-U",
-    action="store_true",
-    help="Don't prompt for confirmation",
-)
-
-parser_register_token = subparsers.add_parser(
-    "register-token", help="Register a domain with Hybrid Cloud Console"
-)
-parser_register_token.set_defaults(callback=register_callback)
-parser_register_token.add_argument("token", type=str)
-parser_register_token.add_argument(
     "--unattended",
     "-U",
     action="store_true",
@@ -175,17 +162,6 @@ def main(args=None):
     with hccapi.HCCAPI(api=ipalib.api, timeout=args.timeout) as api:
         try:
             if args.action == "register":
-                do_it = True
-                if not args.unattended and sys.stdin.isatty():
-                    # print summary and ask for confirmation
-                    _, result = api.status_check()
-                    do_it = confirm_register(result)
-                if not do_it:
-                    parser.exit(status=0, message="Registration cancelled\n")
-                _, result = api.register_domain_old(
-                    args.domain_id, args.token
-                )
-            elif args.action == "register-token":
                 if not args.unattended and sys.stdin.isatty():
                     # print summary and ask for confirmation
                     _, result = api.status_check()
@@ -194,7 +170,7 @@ def main(args=None):
                         parser.exit(
                             status=0, message="Registration cancelled\n"
                         )
-                _, result = api.register_domain_token(args.token)
+                _, result = api.register_domain(args.token)
             elif args.action == "update":
                 _, result = api.update_domain(args.update_server_only)
             elif args.action == "status":

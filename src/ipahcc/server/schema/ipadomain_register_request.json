@@ -4,7 +4,7 @@
   "description": "A domain resource",
   "allOf": [
     {
-      "$ref": "defs.json#/$defs/DomainBase"
+      "$ref": "defs.json#/$defs/Domain"
     }
   ]
 }

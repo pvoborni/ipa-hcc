@@ -55,14 +55,13 @@
         }
       }
     },
-    "DomainBase": {
+    "Domain": {
       "title": "Base type for domain objects",
       "description": "A domain resource",
       "type": "object",
       "required": [
         "domain_name",
-        "domain_type",
-        "rhel-idm"
+        "domain_type"
       ],
       "additionalProperties": false,
       "properties": {
