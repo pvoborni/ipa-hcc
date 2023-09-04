@@ -61,7 +61,6 @@ HCC_DOMAIN_TYPE = "rhel-idm"  # noqa: S105
 
 # for testing
 DEVELOPMENT_MODE = True
-TEST_DOMAIN_ID = "772e9618-d0f8-4bf8-bfed-d2831f63c619"
 MOCKAPI_PRIV_JWK = os.path.join(
     HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-priv-jwk.json"
 )

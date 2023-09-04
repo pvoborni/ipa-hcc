@@ -19,10 +19,6 @@ rh_api_token: "{{ lookup('env', 'RH_API_TOKEN', default=undef()) }}"
 # COPR repo with builds (not used by hmsidm-dev.yaml)
 ipa_hcc_copr: "@podengo/ipa-hcc"
 
-# see ipahcc.hccplatform
-domain_id: '772e9618-d0f8-4bf8-bfed-d2831f63c619'
-domain_token: 'mockapi'
-
 # Ephemeral environment
 # oc get routes -l app=hmsidm-backend -o jsonpath='{.items[0].spec.host}'
 idmsvc_backend: "{{ lookup('env', 'IDMSVC_BACKEND', default=undef()) }}"

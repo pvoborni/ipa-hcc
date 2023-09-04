@@ -7,15 +7,26 @@
         file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
         name: hmsidm_config
 
-    - name: Run ipa-hcc register
-      command: "timeout 30 ipa-hcc register --unattended {{ hmsidm_config.domain_id }} {{ hmsidm_config.domain_token }}"
-      when:
-        - hmsidm_config.rhc_env in ['prod', 'stage']
-        - meta_role == 'master'
-
     - name: kinit as IPA admin
       shell: |
         echo Secret123 | kinit admin
+
+    - name: ipa config-show
+      command: "ipa config-show --raw"
+      register: ipaconfig
+
+    - name: Register domain
+      when:
+        - hmsidm_config.rhc_env in ['prod', 'stage']
+        - meta_role == 'master'
+        - "'hccdomainid' not in ipaconfig.stdout"
+      block:
+        - name: Run ipa-hcc token
+          command: ipa-hcc token
+          register: token
+
+        - name: Run ipa-hcc register
+          command: "timeout 30 ipa-hcc register --unattended {{ token.stdout | trim }}"
 
     - name: Add locations
       command: "ipa location-add {{ item }}"

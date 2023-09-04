@@ -64,10 +64,14 @@ add: member: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 # update/create permissions (before modifying any permissions)
 plugin: update_managed_permissions
 
+# Allow HCC Host Administrator to add hosts and modify HCC attributes
 dn: cn=System: Add Hosts,cn=permissions,cn=pbac,$SUFFIX
 add: member: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 
 dn: cn=System: Modify HCC host attributes,cn=permissions,cn=pbac,$SUFFIX
+add: member: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
+
+dn: cn=System: Modify HCC config attributes,cn=permissions,cn=pbac,$SUFFIX
 add: member: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 
 # Index

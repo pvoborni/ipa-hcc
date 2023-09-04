@@ -354,7 +354,8 @@
           "items": {
             "type": "string"
           },
-          "minItems": 1
+          "minItems": 0,
+          "x-comment": "TODO: Set \"minItems: 1\" after backend has implemented keys"
         },
         "revoked_kids": {
           "description": "An array of revoked key identifiers (JWK kid)",

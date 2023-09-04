@@ -327,7 +327,7 @@ class Application(JSONWSGIApp):
 
         # set hccorgid in global IPA configuration
         if not self._is_connected():
-            self._is_connected()
+            self._connect_ipa()
         try:
             self.api.Command.config_mod(
                 hccorgid=str(org_id),

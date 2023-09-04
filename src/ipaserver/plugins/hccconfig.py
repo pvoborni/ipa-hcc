@@ -74,6 +74,10 @@ config.managed_permissions.update(
             "ipapermtargetfilter": [f"(objectclass={hcc_config_class})"],
             "ipapermdefaultattr": hcc_config_attributes,
         },
+        "System: Modify HCC config attributes": {
+            "ipapermright": {"write"},
+            "ipapermdefaultattr": hcc_config_attributes,
+        },
     },
 )
 

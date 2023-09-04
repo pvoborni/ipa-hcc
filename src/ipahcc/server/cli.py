@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(
     usage="\n".join(
         [
             "",
-            "  %(prog)s [options] register DOMAIN_ID TOKEN",
+            "  %(prog)s [options] register TOKEN",
             "  %(prog)s [options] update [--update-server-only]",
             "  %(prog)s [options] status",
         ]
@@ -62,11 +62,12 @@ subparsers = parser.add_subparsers(dest="action")
 
 
 def confirm_register(result: hccapi.APIResult) -> bool:
-    print("Domain information:")
-    j = result.body
+    j = result.json()
     if typing.TYPE_CHECKING:
         assert isinstance(j, dict)
     dns_domains = j[hccplatform.HCC_DOMAIN_TYPE]["realm_domains"]
+
+    print("Domain information:")
     print(f" realm name:  {j[hccplatform.HCC_DOMAIN_TYPE]['realm_name']}")
     print(f" domain name: {j['domain_name']}")
     print(f" dns domains: {', '.join(dns_domains)}")

@@ -85,7 +85,7 @@ class TestJSONSchema(conftest.IPABaseTests):
 
     def test_domain_get(self):
         instance = {
-            "domain_id": hccplatform.TEST_DOMAIN_ID,
+            "domain_id": conftest.DOMAIN_ID,
             "domain_name": conftest.DOMAIN,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             hccplatform.HCC_DOMAIN_TYPE: {
