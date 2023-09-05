@@ -4,17 +4,11 @@
   "description": "TODO",
   "type": "object",
   "required": [
-    "auto_enrollment_enabled",
-    "signing_keys"
+    "auto_enrollment_enabled"
   ],
-  "additionalProperties": false,
-  "properties": {
-    "auto_enrollment_enabled": {
-      "description": "Enable or disable host vm auto-enrollment for this domain",
-      "type": "boolean"
-    },
-    "signing_keys": {
-      "$ref": "defs.json#/$defs/SigningKeys"
+  "allOf": [
+    {
+      "$ref": "defs.json#/$defs/Domain"
     }
-  }
+  ]
 }

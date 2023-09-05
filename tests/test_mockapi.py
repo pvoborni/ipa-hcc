@@ -1,3 +1,4 @@
+import copy
 import time
 import typing
 import unittest
@@ -168,13 +169,10 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
             },
         )
         self.assert_response(200, status_code, status_msg, headers, response)
-        expected = {
-            "domain_id": tok["domain_id"],
-            "signing_keys": {
-                "keys": [self.app.raw_pub_key],
-                "revoked_kids": ["bad key id"],
-            },
-        }
+
+        expected: typing.Dict[str, typing.Any] = copy.deepcopy(DOMAIN_REQUEST)
+        expected["auto_enrollment_enabled"] = True
+        expected["domain_id"] = tok["domain_id"]
         self.assertEqual(response, expected)
         self.m_api.Command.config_mod.assert_called_with(
             hccorgid=conftest.ORG_ID
@@ -193,13 +191,9 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
         )
 
         self.assert_response(200, status_code, status_msg, headers, response)
-        expected = {
-            "auto_enrollment_enabled": True,
-            "signing_keys": {
-                "keys": [self.app.raw_pub_key],
-                "revoked_kids": ["bad key id"],
-            },
-        }
+        expected: typing.Dict[str, typing.Any] = copy.deepcopy(DOMAIN_REQUEST)
+        expected["auto_enrollment_enabled"] = True
+        expected["domain_id"] = conftest.DOMAIN_ID
         self.assertEqual(response, expected)
 
 

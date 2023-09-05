@@ -339,34 +339,6 @@
       "minLength": 3,
       "pattern": "^[A-Z0-9\\.\\-]+$"
     },
-    "SigningKeys": {
-      "title": "Signing keys",
-      "description": "Serialized JWKs with revocation information",
-      "type": "object",
-      "required": [
-        "keys"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "keys": {
-          "description": "An array of serialized JSON Web Keys (JWK strings)",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 0,
-          "x-comment": "TODO: Set \"minItems: 1\" after backend has implemented keys"
-        },
-        "revoked_kids": {
-          "description": "An array of revoked key identifiers (JWK kid)",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1
-        }
-      }
-    },
     "SubscriptionManagerId": {
       "title": "Subscription manager id",
       "description": "A Red Hat Subcription Manager ID of a RHEL host.",

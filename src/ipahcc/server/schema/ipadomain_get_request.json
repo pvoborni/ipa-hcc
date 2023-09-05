@@ -3,6 +3,7 @@
   "title": "Root Type for DomainResponse",
   "description": "A domain resource",
   "required": [
+    "auto_enrollment_enabled",
     "domain_id"
   ],
   "allOf": [

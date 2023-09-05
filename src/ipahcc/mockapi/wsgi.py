@@ -210,6 +210,12 @@ class Application(JSONWSGIApp):
     ) -> dict:
         return {}
 
+    @route("GET", "^/signing_keys$")
+    def handle_keys(  # pylint: disable=unused-argument
+        self, env: dict, body: dict
+    ) -> dict:
+        return {"keys": [self.raw_pub_key], "revoked_kids": ["bad key id"]}
+
     @route(
         "POST",
         f"^/host-conf/(?P<inventory_id>{UUID_RE})/(?P<fqdn>[^/]+)$",
@@ -316,14 +322,7 @@ class Application(JSONWSGIApp):
                 404, f"invalid X-RH-IDM-Registration-Token: {e}"
             ) from None
 
-        self._check_domain(body)
-        response = {
-            "domain_id": str(domain_id),
-            "signing_keys": {
-                "keys": [self.raw_pub_key],
-                "revoked_kids": ["bad key id"],
-            },
-        }
+        response = self._handle_domain(str(domain_id), body)
 
         # set hccorgid in global IPA configuration
         if not self._is_connected():
@@ -351,19 +350,17 @@ class Application(JSONWSGIApp):
         domain_id: str,
     ) -> dict:
         logger.info("Update domain %s", domain_id)
-        self._check_domain(body)
-        return {
-            "auto_enrollment_enabled": True,
-            "signing_keys": {
-                "keys": [self.raw_pub_key],
-                "revoked_kids": ["bad key id"],
-            },
-        }
+        return self._handle_domain(domain_id, body)
 
-    def _check_domain(self, body: dict) -> None:
+    def _handle_domain(self, domain_id: str, body: dict) -> dict:
         domain_name = body["domain_name"]
         domain_type = body["domain_type"]
         if domain_name != self.api.env.domain:
             raise HTTPException(400, "unsupported domain name")
         if domain_type != hccplatform.HCC_DOMAIN_TYPE:
             raise HTTPException(400, "unsupported domain type")
+        if domain_id != body.get("domain_id", domain_id):
+            raise HTTPException(400, "domain id mismatch")
+        body.setdefault("auto_enrollment_enabled", True)
+        body["domain_id"] = domain_id
+        return body

@@ -85,6 +85,7 @@ class TestJSONSchema(conftest.IPABaseTests):
 
     def test_domain_get(self):
         instance = {
+            "auto_enrollment_enabled": True,
             "domain_id": conftest.DOMAIN_ID,
             "domain_name": conftest.DOMAIN,
             "domain_type": hccplatform.HCC_DOMAIN_TYPE,

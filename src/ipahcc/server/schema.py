@@ -47,6 +47,7 @@ SCHEMATA = {
     "IPADomainUpdateResponse": "ipadomain_update_response.json",
     "DomainRegTokenRequest": "domain_reg_token_request.json",
     "DomainRegTokenResponse": "domain_reg_token_response.json",
+    "SigningKeysResponse": "signing_keys_response.json",
     "Errors": "errors.json",
 }
 

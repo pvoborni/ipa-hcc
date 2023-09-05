@@ -344,6 +344,17 @@ class HCCAPI:
         result = APIResult.from_response(resp, 0, msg)
         return body, result
 
+    def get_signing_keys(self) -> typing.Tuple[dict, APIResult]:
+        resp = self._submit_idmsvc_api(
+            method="GET",
+            subpath=("signing_keys",),
+        )
+        response = resp.json()
+        schema.validate_schema(response, "SigningKeysResponse")
+        msg = "Retrieved hostconf signing keys."
+        result = APIResult.from_response(resp, 0, msg)
+        return {}, result
+
     def _get_domain_id(self, config: typing.Dict[str, typing.Any]):
         domain_id = _get_one(config, "hccdomainid", None)
         if domain_id is None:
@@ -493,7 +504,7 @@ class HCCAPI:
         self,
         method: str,
         subpath: tuple,
-        payload: typing.Dict[str, typing.Any],
+        payload: typing.Optional[typing.Dict[str, typing.Any]] = None,
         extra_headers=None,
     ) -> requests.Response:
         api_url = hccplatform.IDMSVC_API_URL.rstrip("/")
@@ -527,8 +538,9 @@ class HCCAPI:
 
         logger.debug("Sending %s request to %s", method, url)
         logger.debug("headers: %s", headers)
-        body = json.dumps(payload, indent=2)
-        logger.debug("body: %s", body)
+        if payload is not None:
+            body = json.dumps(payload, indent=2)
+            logger.debug("body: %s", body)
         try:
             resp = self.session.request(
                 method,

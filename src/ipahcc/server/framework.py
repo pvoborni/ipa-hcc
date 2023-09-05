@@ -14,6 +14,7 @@ import re
 import traceback
 import typing
 from http.client import responses as http_responses
+from urllib.parse import parse_qs
 
 import gssapi
 import ipalib
@@ -171,7 +172,8 @@ class JSONWSGIApp:
                 )
             body = json.loads(env["wsgi.input"].read(length))
         else:
-            body = None
+            qs = env.get("QUERY_STRING")
+            body = parse_qs(qs) if qs else {}
 
         for pathre, methmap in self.routes:
             mo = pathre.match(pathinfo)

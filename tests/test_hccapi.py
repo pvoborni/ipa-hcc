@@ -40,21 +40,20 @@ COMMON_RESULT: typing.Dict[str, typing.Any] = {
     },
 }
 
-DOMAIN_REGISTER_RESULT = {
-    "domain_id": conftest.DOMAIN_ID,
-    "signing_keys": {
-        "keys": ["good JWK"],
-        "revoked_kids": ["bad key id"],
-    },
-}
+DOMAIN_REGISTER_RESULT = copy.deepcopy(COMMON_RESULT)
+DOMAIN_REGISTER_RESULT.update(
+    {
+        "auto_enrollment_enabled": True,
+        "domain_id": conftest.DOMAIN_ID,
+    }
+)
+DOMAIN_REGISTER_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(
+    {
+        "ca_certs": [conftest.IPA_CA_CERTINFO],
+    }
+)
 
-DOMAIN_UPDATE_RESULT = {
-    "auto_enrollment_enabled": True,
-    "signing_keys": {
-        "keys": ["good JWK"],
-        "revoked_kids": ["bad key id"],
-    },
-}
+DOMAIN_UPDATE_RESULT = DOMAIN_REGISTER_RESULT
 
 STATUS_CHECK_RESULT = copy.deepcopy(COMMON_RESULT)
 STATUS_CHECK_RESULT.update(
@@ -69,6 +68,11 @@ DOMAIN_REG_TOKEN_RESULT = {
     "domain_id": "7b160558-8273-5a24-b559-6de3ff053c63",
     "domain_type": hccplatform.HCC_DOMAIN_TYPE,
     "expiration": 1691662998,
+}
+
+SIGNING_KEYS_RESPONSE = {
+    "keys": ["good JWK"],
+    "revoked_kids": ["bad key id"],
 }
 
 
@@ -183,6 +187,14 @@ class TestHCCAPI(TestHCCAPICommon):
         )
         info, resp = self.m_hccapi.update_domain()
         self.assertIsInstance(info, dict)
+        self.assertIsInstance(resp, hccapi.APIResult)
+
+    def test_signing_keys(self):
+        self.m_session.request.return_value = self.mkresponse(
+            200, SIGNING_KEYS_RESPONSE
+        )
+        info, resp = self.m_hccapi.get_signing_keys()
+        self.assertEqual(info, {})
         self.assertIsInstance(resp, hccapi.APIResult)
 
     def test_status_check(self):
