@@ -21,5 +21,4 @@ srv92_backend:
   except:
     variables:
       - $CI_MERGE_REQUEST_LABELS =~ /.*skip idm-ci.*/
-  # backend is currently not working
-  allow_failure: true
+  # allow_failure: true
