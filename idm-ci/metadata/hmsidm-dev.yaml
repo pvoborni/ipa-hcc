@@ -47,6 +47,8 @@ phases:
         extra_vars:
           target_group: ipaserver
       - playbook: prep/ipa-server-install.yaml
+        extra_vars:
+          setup_kra: false
       - playbook: prep/ipa-replica-install.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
