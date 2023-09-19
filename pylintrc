@@ -26,6 +26,7 @@ disable=
     missing-function-docstring,
     missing-module-docstring,
     no-name-in-module,
+    no-else-continue,
     invalid-name,
     no-member,
     fixme,

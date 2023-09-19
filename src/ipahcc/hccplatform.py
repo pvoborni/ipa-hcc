@@ -41,6 +41,7 @@ HCC_ENROLLMENT_AGENT_CACHE_DIR = "/var/cache/ipa-hcc"
 # Note: gssproxy directory comes with correct SELinux roles.
 HCC_ENROLLMENT_AGENT_KEYTAB = "/var/lib/gssproxy/hcc-enrollment.keytab"
 
+HCC_ENROLLMENT_JWK_PRIVILEGE = "HCC JWK Administrators"
 HCC_ENROLLMENT_ROLE = "HCC Enrollment Administrators"
 
 HCC_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"

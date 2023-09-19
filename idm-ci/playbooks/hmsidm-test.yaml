@@ -32,6 +32,27 @@
 - hosts: ipaserver
   become: true
   become_method: sudo
+  vars:
+    base_dir: "{{ playbook_dir | dirname | dirname }}"
+    remote_dir: "/root/ipa-hcc"
   tasks:
     - name: Run ipa-hcc update
       command: ipa-hcc update
+
+    - name: Copy integration test file
+      copy:
+        src: "{{ base_dir }}/tests/test_ipaserver_integration.py"
+        dest: "{{ remote_dir }}/tests/"
+        owner: root
+        group: root
+        mode: u+rwX,g+rX,o-rwx
+
+    - name: Run integration tests
+      command: python3 -m unittest -v tests/test_ipaserver_integration.py
+      args:
+        chdir: "{{ remote_dir }}"
+      register: testresults
+
+    - name: Print test results
+      debug:
+        msg: "stdout: {{ testresults.stdout | trim }}\nstderr: {{ testresults.stderr | trim }}"

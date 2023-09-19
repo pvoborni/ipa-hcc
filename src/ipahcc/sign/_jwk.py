@@ -6,6 +6,7 @@
 - 'use' is set to 'sig' (signing)
 - additional key 'exp' with key expiration time
 """
+import enum
 import time
 import typing
 
@@ -24,7 +25,15 @@ __all__ = (
     "load_key",
 )
 
-# EC key curve to algorighm mapping
+
+class KeyState(str, enum.Enum):
+    VALID = "valid"
+    EXPIRED = "expired"
+    REVOKED = "revoked"
+    INVALID = "invalid"
+
+
+# EC key curve to algorithm mapping
 KTY = "EC"
 CRV = "P-256"
 CRV_TO_ALG = {
@@ -155,6 +164,15 @@ class InvalidKey(JWException):
         self.msg = msg
 
 
+class ExpiredKey(JWException):
+    def __init__(self, key: JWKDict):
+        msg = f"key {key['kid']} has expired"
+        super().__init__(msg)
+        self.key = key
+        self.name = "exp"
+        self.msg = msg
+
+
 def get_public_key(priv_key: JWKDict) -> JWKDict:
     """Convert a private JWK to a public JWK"""
     pub_key = priv_key.export_public(as_dict=True)
@@ -168,15 +186,26 @@ def load_key(raw_key: str) -> JWKDict:
     """
     dct = json_decode(raw_key)  # type: dict
     key = JWKDict(**dct)
+    validate_key(key)
+    return key
 
+
+def validate_key(key: JWKDict) -> None:
+    """Validate properties of a JWKDict
+
+    Properties: kid, kty, crv, use, exp
+    """
     kid = key.get("kid")
     if not kid:
         raise InvalidKey(key, "kid", "Missing key identifier (kid)")
 
     if key["kty"] != KTY:
         raise InvalidKey(key, "kty", "Unsupported key type.")
-    if key["kty"] == "EC" and key["crv"] not in CRV_TO_ALG:
+    alg = CRV_TO_ALG.get(key["crv"])
+    if not alg:
         raise InvalidKey(key, "crv", "Unsupported EC curve.")
+    if key.get("alg") != alg:
+        raise InvalidKey(key, "alg", "Unsupported or missing algorithm.")
 
     # jwcrypto ensure consistency between use and key_ops
     if "use" not in key:
@@ -187,9 +216,7 @@ def load_key(raw_key: str) -> JWKDict:
     if "exp" not in key:
         raise InvalidKey(key, "exp", "Key expiration 'exp' is missing.")
     if time.time() > key["exp"]:
-        raise InvalidKey(key, "exp", "key has expired")
-
-    return key
+        raise ExpiredKey(key)
 
 
 def generate_private_key(*, crv=CRV, validity: int = 90 * 86400) -> JWKDict:

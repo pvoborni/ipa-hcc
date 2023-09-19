@@ -48,12 +48,6 @@
             version: "{{ hmsidm_config.backend_git_branch }}"
             dest: /idm-domains-backend
 
-        - name: Copy configs/config.example.yaml to configs/config.yaml
-          ansible.builtin.copy:
-            src: /idm-domains-backend/configs/config.example.yaml
-            dest: /idm-domains-backend/configs/config.yaml
-            remote_src: yes
-
         # - name: Log into Docker Hub
         #   command: >
         #     podman login

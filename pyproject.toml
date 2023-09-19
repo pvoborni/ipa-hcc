@@ -132,6 +132,7 @@ extend-exclude = ["api/*.py"]
 # allow print in CLI scripts
 "src/ipahcc/server/cli.py" = ["T20"]
 "src/ipahcc_auto_enrollment.py" = ["T20"]
+"src/ipahcc/sign/__main__.py" = ["T20"]
 
 [tool.ruff.isort]
 known-first-party = [

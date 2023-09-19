@@ -1,6 +1,8 @@
+from typing import Union
 from _typeshed import Incomplete
 from collections.abc import Generator
 from ipalib import Method, Object, crud
+from ipapython.dn import DN
 
 unicode = str
 DNA_MAGIC: int
@@ -63,7 +65,7 @@ def add_missing_object_class(
 class LDAPObject(Object):
     backend_name: str
     parent_object: str
-    container_dn: str
+    container_dn: Union[str, DN]
     object_name: Incomplete
     object_name_plural: Incomplete
     object_class: Incomplete

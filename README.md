@@ -74,16 +74,40 @@ $ ipa config-mod --help
   ...
 ```
 
+## Internal IPA API extension
+
+The `hccjwk` plugin adds internal APIs:
+*  ``hccjwk_add``
+*  ``hccjwk_find``
+*  ``hccjwk_show``
+*  ``hccjwk_revoke``
+*  ``hccjwk_del``
+
+
 ## Roles / Privileges / Permissions
 
 * Permission
   * ``System: Read HCC config attributes``
   * ``System: Read HCC host attributes``
   * ``System: Modify HCC host attributes``
+  * ``System: Read HCC JWKs``
+  * ``System: Add HCC JWK``
+  * ``System: Delete HCC JWK``
+  * ``System: Modify HCC JWK``
 * Privilege ``HCC Host Administrators`` that grants permissions
-  * ``System: Add Hosts``
+  * ``System: Add Hosts`` (IPA permission)
+  * ``System: Modify HCC host attributes`` (IPA permission)
+  * ``System: Read HCC config attributes``
+  * ``System: Read HCC host attributes``
   * ``System: Modify HCC host attributes``
-* Role ``HCC Enrollment Administrators``
+* Privilege ``HCC JWK Administrators`` that grants permissions
+  * ``System: Read HCC JWKs``
+  * ``System: Add HCC JWK``
+  * ``System: Delete HCC JWK``
+  * ``System: Modify HCC JWK``
+* Role ``HCC Enrollment Administrators`` with privileges
+  * ``HCC Host Administrators``
+  * ``HCC JWK Administrators``
 
 ## Schema / server updater
 

@@ -61,18 +61,6 @@ IPA_CA_CERTINFO = create_certinfo(
 )
 KDC_CA_DATA = read_cert_dir(KDC_CA_DIR)
 
-# initialize first step of IPA API so server imports work
-if not api.isdone("bootstrap"):
-    api.bootstrap(
-        host=CLIENT_FQDN,
-        server=SERVER_FQDN,
-        domain=DOMAIN,
-        realm=REALM,
-    )
-else:  # pragma: no cover
-    pass
-
-
 try:
     # pylint: disable=unused-import,ungrouped-imports
     import ipalib.install  # noqa: F401
@@ -86,8 +74,13 @@ try:
     import ipaserver.masters  # noqa: F401
 except ImportError:
     HAS_IPASERVER = False
+    IS_IPASERVER_CONFIGURED = False
 else:
+    from ipalib.facts import is_ipa_configured
+
     HAS_IPASERVER = True
+    IS_IPASERVER_CONFIGURED = is_ipa_configured()
+
 
 requires_ipa_install = unittest.skipUnless(
     HAS_IPA_INSTALL, "requires 'ipaclient.install' or 'ipalib.install'"
@@ -95,6 +88,27 @@ requires_ipa_install = unittest.skipUnless(
 requires_ipaserver = unittest.skipUnless(
     HAS_IPASERVER, "requires 'ipaserver'"
 )
+
+# initialize first step of IPA API so server imports work
+if not api.isdone("bootstrap"):
+    if IS_IPASERVER_CONFIGURED:
+        # the host is configured as an IPA system
+        api.bootstrap(
+            force_schema_check=True,
+            log=None,
+            in_server=False,
+        )
+    else:
+        # not an IPA system, use fake values
+        api.bootstrap(
+            log=None,
+            host=CLIENT_FQDN,
+            server=SERVER_FQDN,
+            domain=DOMAIN,
+            realm=REALM,
+        )
+else:  # pragma: no cover
+    pass
 
 
 class CaptureHandler(logging.Handler):

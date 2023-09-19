@@ -67,7 +67,9 @@ class TestJWK(unittest.TestCase):
         pub = sign.get_public_key(priv)
 
         pub["exp"] = time.time() - 60
-        self.assert_load_key(pub, "key has expired")
+        with self.assertRaises(sign.ExpiredKey):
+            self.assert_load_key(pub, "key has expired")
+
         del pub["exp"]
         self.assert_load_key(pub, "'exp' is missing")
 

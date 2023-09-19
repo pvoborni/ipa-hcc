@@ -12,7 +12,7 @@ default: objectClass: nestedGroup
 default: objectClass: ipaobject
 default: objectClass: ipahostgroup
 default: description: Hybrid Cloud Console auto-enrolled hosts
-default: cn: hcc-enrollment
+only: cn: hcc-enrollment
 default: ipaUniqueID: autogenerate
 
 # automember for host group
@@ -20,7 +20,7 @@ dn: cn=hcc-enrollment,cn=Hostgroup,cn=automember,cn=etc,$SUFFIX
 default: objectClass: automemberregexrule
 default: objectClass: top
 default: autoMemberTargetGroup: cn=hcc-enrollment,cn=hostgroups,cn=accounts,$SUFFIX
-default: cn: hcc-enrollment
+only: cn: hcc-enrollment
 default: autoMemberExclusiveRegex: memberof=cn=ipaservers,cn=hostgroups,cn=accounts,.*
 default: autoMemberInclusiveRegex: hccsubscriptionid=.*
 
@@ -28,7 +28,7 @@ default: autoMemberInclusiveRegex: hccsubscriptionid=.*
 dn: cn=rhsm-cert,cn=certmaprules,cn=certmap,$SUFFIX
 default: objectClass: ipacertmaprule
 default: objectClass: top
-default: cn: rhsm-cert
+only: cn: rhsm-cert
 default: description: Rule for Red Hat Subscription Manager (RHSM) certificates (/etc/pki/consumer/cert.pem).
 # default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX))(!(krbprincipalkey=*)))
 default: ipaCertMapMapRule: (&(hcccertsubject={subject_dn!nss_x500})(!(memberof=cn=ipaservers,cn=hostgroups,cn=accounts,$SUFFIX)))
@@ -41,23 +41,42 @@ dn: cn=IPAHCCUpdate,cn=$FQDN,cn=masters,cn=ipa,cn=etc,$SUFFIX
 default: objectClass: ipaConfigObject
 default: objectClass: nsContainer
 default: objectClass: top
-default: cn: IPAHCCUpdate
+only: cn: IPAHCCUpdate
 default: ipaConfigString: enabledService
 default: ipaConfigString: startOrder 46
+
+# subtree for public JWKs
+dn: cn=hcc,cn=etc,$SUFFIX
+default: objectClass: nsContainer
+default: objectClass: top
+only: cn: hcc
+
+dn: cn=jwk,cn=hcc,cn=etc,$SUFFIX
+default: objectClass: nsContainer
+default: objectClass: top
+only: cn: jwk
 
 # roles and privileges for HCC enrollment
 dn: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 default: objectClass: groupofnames
 default: objectClass: nestedgroup
 default: objectClass: top
-default: cn: HCC Enrollment Administrators
+only: cn: HCC Enrollment Administrators
 default: description: Enrollment Administrators for Red Hat Hybrid Cloud Console
+
+dn: cn=HCC JWK Administrators,cn=privileges,cn=pbac,$SUFFIX
+default: objectClass: groupofnames
+default: objectClass: nestedgroup
+default: objectClass: top
+only: cn: HCC JWK Administrators
+default: description: Administrators for Hybrid Cloud Console enrollment JSON Web Tokens (JWK)
+add: member: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 
 dn: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 default: objectClass: groupofnames
 default: objectClass: nestedgroup
 default: objectClass: top
-default: cn: HCC Host Administrators
+only: cn: HCC Host Administrators
 default: description: Limited Host Administrators for Hybrid Cloud Console auto-enrollment
 add: member: cn=HCC Enrollment Administrators,cn=roles,cn=accounts,$SUFFIX
 
@@ -76,7 +95,7 @@ add: member: cn=HCC Host Administrators,cn=privileges,cn=pbac,$SUFFIX
 
 # Index
 dn: cn=HCCSubscriptionId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
-default:cn: HCCSubscriptionId
+only: cn: HCCSubscriptionId
 default:ObjectClass: top
 default:ObjectClass: nsIndex
 default:nsSystemIndex: false
@@ -84,7 +103,7 @@ add:nsIndexType: eq
 add:nsIndexType: pres
 
 dn: cn=HCCInventoryId,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
-default:cn: HCCInventoryId
+only: cn: HCCInventoryId
 default:ObjectClass: top
 default:ObjectClass: nsIndex
 default:nsSystemIndex: false
@@ -92,7 +111,7 @@ default:nsIndexType: eq
 default:nsIndexType: pres
 
 dn: cn=HCCCertSubject,cn=index,cn=userRoot,cn=ldbm database,cn=plugins,cn=config
-default:cn: HCCCertSubject
+only: cn: HCCCertSubject
 default:ObjectClass: top
 default:ObjectClass: nsIndex
 default:nsSystemIndex: false
@@ -105,7 +124,7 @@ dn: cn=HCCCertSubject uniqueness,cn=plugins,cn=config
 default:objectClass: top
 default:objectClass: nsSlapdPlugin
 default:objectClass: extensibleObject
-default:cn: HCCCertSubject uniqueness
+only: cn: HCCCertSubject uniqueness
 default:nsslapd-pluginDescription: Enforce unique attribute values
 default:nsslapd-pluginPath: libattr-unique-plugin
 default:nsslapd-pluginInitfunc: NSUniqueAttr_Init
