@@ -64,17 +64,17 @@ source = [
     "ipahcc_auto_enrollment",
     "ipahcc",
     "ipaserver",
-    "tests",
+    "tests/",
+]
+omit = [
+    "/usr/*",
+    "*/ipahcc/sign/__main__.py",
 ]
 
 [tool.coverage.paths]
 source = [
-   "src/ipahcc_auto_enrollment.py",
-   "src/ipahcc/",
-   "src/ipaserver/",
-   "*.tox/*/lib*/python*/site-packages/ipahcc_auto_enrollment.py",
-   "*.tox/*/lib*/python*/site-packages/ipahcc",
-   "*.tox/*/lib*/python*/site-packages/ipaserver",
+   "src/",
+   ".tox/*/lib*/python*/site-packages/",
 ]
 tests = [
    "tests/",

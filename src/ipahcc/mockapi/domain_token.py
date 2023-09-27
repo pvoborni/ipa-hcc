@@ -1,12 +1,13 @@
 """Reference implementation of domain registration token"""
 
-import base64
 import hashlib
 import hmac
 import sys
 import time
 import typing
 import uuid
+
+from jwcrypto.common import base64url_decode, base64url_encode
 
 PERSONALITY = b"register domain"
 
@@ -42,9 +43,9 @@ def _generate_token_ns(
     key: bytes, domain_type: str, org_id: str, expires: int
 ) -> str:
     payload_bytes = expires.to_bytes(8, "big")
-    payload_b64 = _b64encode(payload_bytes)
+    payload_b64 = base64url_encode(payload_bytes)
     sig = _mac_digest(key, domain_type, org_id, payload_bytes)
-    sig_b64 = _b64encode(sig)
+    sig_b64 = base64url_encode(sig)
     return f"{payload_b64}.{sig_b64}"
 
 
@@ -62,27 +63,12 @@ def _validate_token_sig(
     key: bytes, domain_type: str, org_id: str, token: str
 ) -> int:
     payload_b64, sig_b64 = token.split(".")
-    payload_bytes = _b64decode(payload_b64)
-    sig = _b64decode(sig_b64)
+    payload_bytes = base64url_decode(payload_b64)
+    sig = base64url_decode(sig_b64)
     digest = _mac_digest(key, domain_type, org_id, payload_bytes)
     if not hmac.compare_digest(sig, digest):
         raise ValueError("Invalid signature")
     return int.from_bytes(payload_bytes, "big")
-
-
-def _b64encode(payload: bytes) -> str:
-    """URL-safe base64 encoding without padding"""
-    return base64.urlsafe_b64encode(payload).rstrip(b"=").decode("ascii")
-
-
-def _b64decode(payload: str) -> bytes:
-    """URL-safe base64 decoding without padding"""
-    rem = len(payload) % 4
-    if rem == 2:
-        payload += "=="
-    elif rem == 3:
-        payload += "="
-    return base64.urlsafe_b64decode(payload.encode("utf-8"))
 
 
 def _mac_digest(

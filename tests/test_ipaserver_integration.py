@@ -18,7 +18,7 @@ from ipahcc import hccplatform, sign
 
 
 @unittest.skipUnless(is_ipa_configured(), "host is not an IPA server")
-class TestIPAServerIntegration(unittest.TestCase):
+class TestIPAServerIntegration(unittest.TestCase):  # pragma: no cover
     maxDiff = None
 
     @classmethod

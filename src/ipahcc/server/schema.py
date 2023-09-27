@@ -5,6 +5,7 @@ __all__ = (
 
 import logging
 import pathlib
+import sys
 import typing
 import uuid
 from datetime import datetime
@@ -94,9 +95,12 @@ def format_uuid(instance: object) -> bool:
 def format_date_time(instance: object) -> bool:
     if not isinstance(instance, str):
         return False
-    dt = datetime.fromisoformat(instance)
-    # must have a timezone (e.g. "Z" or "+02:00" suffix)
-    return dt.tzinfo is not None
+    if sys.version_info >= (3, 7):
+        dt = datetime.fromisoformat(instance)
+        # must have a timezone (e.g. "+02:00" suffix)
+        return dt.tzinfo is not None
+    else:
+        return True
 
 
 @draft4_format_checker.checks("idn-hostname", ValueError)

@@ -75,7 +75,9 @@ def read_cert_dir(path: str) -> str:
     return "\n".join(data)
 
 
-def prompt_yesno(label, default: typing.Optional[bool] = None) -> bool:
+def prompt_yesno(
+    label, default: typing.Optional[bool] = None
+) -> bool:  # pragma: no cover
     """
     Prompt user for yes/no input. This method returns True/False according
     to user response.
@@ -90,7 +92,6 @@ def prompt_yesno(label, default: typing.Optional[bool] = None) -> bool:
 
     `KeyboardInterrupt` or `EOFError` is interpreted as "no".
     """
-
     default_prompt = None  # type: typing.Optional[str]
     if default is not None:
         if default:
