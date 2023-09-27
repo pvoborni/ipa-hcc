@@ -9,7 +9,7 @@ from ipapython import admintool
 from ipapython.dnsutil import DNSName
 
 import conftest
-from ipahcc import hccplatform
+from ipahcc import hccplatform, sign
 from ipahcc.mockapi import domain_token
 from ipahcc.server import hccapi
 
@@ -70,9 +70,14 @@ DOMAIN_REG_TOKEN_RESULT = {
     "expiration": 1691662998,
 }
 
+JWK_PRIV = sign.generate_private_key()
+JWK_PUBSTR = JWK_PRIV.export_public()
+REVOKED_KID = "w7ES12OK"
+EXPIRED_KID = "i9sjItkt"
+
 SIGNING_KEYS_RESPONSE = {
-    "keys": ["good JWK"],
-    "revoked_kids": ["bad key id"],
+    "keys": [JWK_PUBSTR],
+    "revoked_kids": [REVOKED_KID],
 }
 
 
@@ -139,6 +144,25 @@ class TestHCCAPICommon(conftest.IPABaseTests):
                 },
             ),
         }
+        self.m_api.Command.hccjwk_find.return_value = {
+            "result": [
+                {
+                    "cn": (JWK_PRIV["kid"],),
+                    "hccpublicjwk": (JWK_PUBSTR,),
+                    "state": (sign.KeyState.VALID,),
+                },
+                {
+                    "cn": (REVOKED_KID,),
+                    "hccpublicjwk": (),
+                    "state": (sign.KeyState.REVOKED,),
+                },
+                {
+                    "cn": (EXPIRED_KID,),
+                    "hccpublicjwk": (),
+                    "state": (sign.KeyState.EXPIRED,),
+                },
+            ]
+        }
 
         p = mock.patch.object(hccapi, "get_ca_certs")
         self.m_get_ca_certs = p.start()
@@ -202,6 +226,53 @@ class TestHCCAPI(TestHCCAPICommon):
         self.m_session.request.assert_not_called()
         self.assertIsInstance(info, dict)
         self.assertIsInstance(resp, hccapi.APIResult)
+
+    def test_get_ipa_jwkset(self):
+        jwkset = self.m_hccapi.get_ipa_jwkset()
+        expected = sign.JWKSet()
+        expected.add(sign.get_public_key(JWK_PRIV))
+        self.assertEqual(jwkset, expected)
+
+    def test_update_jwk_do_update(self):
+        self.m_session.request.return_value = self.mkresponse(
+            200, SIGNING_KEYS_RESPONSE
+        )
+        # IPA lists revoked key as valid, update_jwk changes it to invalid
+        self.m_api.Command.hccjwk_find.return_value = {
+            "result": [
+                {
+                    "cn": (REVOKED_KID,),
+                    "hccpublicjwk": (JWK_PUBSTR,),  # need a random JWK
+                    "state": (sign.KeyState.VALID,),
+                }
+            ]
+        }
+        self.m_api.Command.batch.return_value = {"results": [{}, {}]}
+
+        info, resp = self.m_hccapi.update_jwk()
+        self.assertIsInstance(resp, hccapi.APIResult)
+        self.assertEqual(info, {})
+        updates = [
+            {
+                "method": "hccjwk_add",
+                "params": [[JWK_PRIV["kid"]], {"hccpublicjwk": JWK_PUBSTR}],
+            },
+            {
+                "method": "hccjwk_revoke",
+                "params": [[REVOKED_KID], {}],
+            },
+        ]
+        self.m_api.Command.batch.assert_called_once_with(updates)
+
+    def test_update_jwk_noop(self):
+        # IPA API has all keys, nothing to do
+        self.m_session.request.return_value = self.mkresponse(
+            200, SIGNING_KEYS_RESPONSE
+        )
+        info, resp = self.m_hccapi.update_jwk()
+        self.assertIsInstance(resp, hccapi.APIResult)
+        self.assertEqual(info, {})
+        self.m_api.Command.batch.assert_not_called()
 
 
 class TestCLI(TestHCCAPICommon):

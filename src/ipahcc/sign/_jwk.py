@@ -84,6 +84,17 @@ else:
             dct = self._get_dict(key)
             del dct[key]
 
+        def __eq__(self, other):
+            if not isinstance(other, JWKBase):
+                return NotImplemented
+
+            return self.thumbprint() == other.thumbprint() and self.get(
+                "kid"
+            ) == other.get("kid")
+
+        def __hash__(self):
+            return hash((self.thumbprint(), self.get("kid")))
+
         def get(self, key, default=None):
             try:
                 return self[key]

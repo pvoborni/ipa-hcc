@@ -103,6 +103,20 @@ parser_update.set_defaults(callback=update_callback)
 parser_update.add_argument("--update-server-only", action="store_true")
 
 
+def update_jwk_callback(result: hccapi.APIResult) -> None:
+    j = result.json()
+    if typing.TYPE_CHECKING:
+        assert isinstance(j, dict)
+    print(f"Received {len(j['keys'])} JWK(s).")
+    print(result.exit_message)
+
+
+parser_update_jwk = subparsers.add_parser(
+    "update-jwk", help="Update JWK signing keys"
+)
+parser_update_jwk.set_defaults(callback=update_jwk_callback)
+
+
 def status_callback(result: hccapi.APIResult) -> None:
     j = result.json()
     if typing.TYPE_CHECKING:
@@ -174,10 +188,12 @@ def main(args=None):
                 _, result = api.register_domain(args.token)
             elif args.action == "update":
                 _, result = api.update_domain(args.update_server_only)
+            elif args.action == "update-jwk":
+                _, result = api.update_jwk()
             elif args.action == "status":
                 _, result = api.status_check()
             elif hccplatform.DEVELOPMENT_MODE and args.action == "token":
-                _, result = api.domain_reg_token()
+                _, result = api.mock_domain_reg_token()
             else:  # pragma: no cover
                 raise ValueError(args.action)
         except hccapi.APIError as e:
