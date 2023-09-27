@@ -30,5 +30,5 @@ dev_password: "{{ lookup('env', 'DEV_PASSWORD', default=undef()) }}"
 # docker_password: "{{ lookup('env', 'DOCKER_PASSWORD', default=undef()) }}"
 
 # compose: backend source
-backend_git_repo: "{{ lookup('env', 'BACKEND_GIT_REPO') | default('https://gitlab.cee.redhat.com/identity-management/idmocp/idm-domains-backend.git', True) }}"
+backend_git_repo: "{{ lookup('env', 'BACKEND_GIT_REPO') | default('https://github.com/podengo-project/idmsvc-backend.git', True) }}"
 backend_git_branch: "{{ lookup('env', 'BACKEND_GIT_BRANCH') | default('HEAD', True) }}"

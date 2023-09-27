@@ -75,6 +75,12 @@
             chdir: /idm-domains-backend
           environment: "{{ compose_env }}"
 
+        - name: Clean compose
+          command: make compose-clean
+          args:
+            chdir: /idm-domains-backend
+          environment: "{{ compose_env }}"
+
         - name: Start compose (podman-compose up)
           command: timeout 180 make compose-up
           args:
