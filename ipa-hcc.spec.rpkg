@@ -44,7 +44,7 @@ Summary:        Hybrid Cloud Console extension for IPA
 BuildArch:      noarch
 
 License:        GPLv3+
-URL:            https://gitlab.cee.redhat.com/identity-management/idmocp/ipa-consoledot
+URL:            https://github.com/podengo-project/ipa-hcc
 VCS:            {{{ git_dir_vcs }}}
 Source:         {{{ git_dir_pack }}}
 
