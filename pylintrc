@@ -42,6 +42,7 @@ disable=
     no-else-return,
     no-else-raise,
     duplicate-code,
+    use-implicit-booleaness-not-comparison-to-zero,
 
 
 [REPORTS]

@@ -2,15 +2,14 @@
 
 JWT must be signed (JWS):
   - headers "kid" and "alg" must be set
-  - alg is either "ES256" or "ES384" (ECDSA signature with SHA-256/384)
-  - only a single signature is currently handled (no JWKS yet)
+  - alg is always "ES256" (ECDSA signature with SHA-256)
 
 Registered claims:
-  - issuer (iss) must be "https://console.redhat.com/api/idm"
+  - issuer (iss) must be "idmsvc/v1"
   - subject (sub) is RHSM cert subject "CN"
   - aud (audience) must be "register host"
   - expiration (exp), not before (nbf), and issued at (iat) must be set
-  - JWT ID (jti) must be set (e.g. random uuid4)
+  - JWT ID (jti) must be set (6 random bytes, URL-safe base64)
 
 Additional private claims:
   - "rhorg" (string) is set to RHSM cert subject "O"
@@ -30,8 +29,8 @@ from jwcrypto.common import (
 
 from ._jwk import CRV_TO_ALG, SUPPORTED_ALGS, JWKDict, JWKSet
 
-ISSUER = "idm/v1"
-AUD_REGISTER_HOST = "register host"
+ISSUER = "idmsvc/v1"
+AUD_JOIN_HOST = "join host"
 CLAIM_ORG_ID = "rhorg"
 CLAIM_DOMAIN_ID = "rhdomid"
 CLAIM_FDQN = "rhfdqn"
@@ -44,7 +43,7 @@ CHECKED_HOST_CLAIMS = {
     # subject StringOrURI, will be set to cert subject CN
     "sub": None,
     # audience (array of StringOrURI), our value must match one entry
-    "aud": AUD_REGISTER_HOST,
+    "aud": AUD_JOIN_HOST,
     # date: expires, not before, issued at (automatically set)
     "exp": None,
     "nbf": None,
@@ -267,7 +266,7 @@ def generate_host_token(
         header = {}
     default_claims = CHECKED_HOST_CLAIMS.copy()
     # aud should be an array
-    default_claims["aud"] = [AUD_REGISTER_HOST]
+    default_claims["aud"] = [AUD_JOIN_HOST]
 
     t = MultiJWST(
         header=header, default_claims=default_claims, algs=SUPPORTED_ALGS

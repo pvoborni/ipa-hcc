@@ -1,7 +1,7 @@
 """JSON Web Key (JWK)
 
 - only key type (kty) "EC"
-- 'crv' must be "P-256" (fast, FIPS approved curved)
+- 'crv' must be "P-256" (fast, FIPS approved curve)
 - key identifier (kid) is set to truncated thumbprint
 - 'use' is set to 'sig' (signing)
 - additional key 'exp' with key expiration time
