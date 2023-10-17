@@ -29,6 +29,10 @@ HOST_CONF_RESPONSE = {
         "enrollment_servers": [
             {"fqdn": conftest.SERVER_FQDN},
         ],
+        "ipa_client_install_args": [
+            "--automount-location=default",
+            "--enable-dns-updates",
+        ],
     },
 }
 
@@ -348,6 +352,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 "--pkinit-anchor",
                 f"FILE:{tmpdir}/ipa_ca.crt",
                 "--unattended",
+                "--automount-location=default",
+                "--enable-dns-updates",
             ],
         )
         self.assertEqual(

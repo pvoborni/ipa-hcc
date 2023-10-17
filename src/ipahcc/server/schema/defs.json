@@ -121,6 +121,15 @@
             "$ref": "#/$defs/IPAServer"
           }
         },
+        "automount_locations": {
+          "description": "List of automount locations for AutoFS",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
         "ca_certs": {
           "description": "A base64 representation of all the list of chain of certificates, including the server ca.",
           "type": "array",
@@ -129,7 +138,7 @@
           }
         },
         "locations": {
-          "description": "List of allowed locations",
+          "description": "List of DNS locations",
           "type": "array",
           "items": {
             "$ref": "#/$defs/Location"
@@ -269,6 +278,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/HostConfIpaServer"
+          }
+        },
+        "ipa_client_install_args": {
+          "description": "List of additional arguments for ipa-client-install",
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         },
         "realm_name": {

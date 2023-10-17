@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import random
+import shlex
 import shutil
 import socket
 import ssl
@@ -216,6 +217,7 @@ class AutoEnrollment:
         self.insights_machine_id: typing.Optional[str] = None
         self.inventory_id: typing.Optional[str] = None
         self.token: typing.Optional[str] = None
+        self.install_args: typing.Iterable[str] = ()
         # internals
         self.tmpdir: typing.Optional[str] = None
 
@@ -558,6 +560,10 @@ class AutoEnrollment:
         # TODO: make token required
         self.token = j.get("token")
         self.realm = j[HCC_DOMAIN_TYPE]["realm_name"]
+        # install args are optional
+        self.install_args = j[HCC_DOMAIN_TYPE].get(
+            "ipa_client_install_args", []
+        )
         self.servers = self._sort_servers(
             j[HCC_DOMAIN_TYPE]["enrollment_servers"],
             self._lookup_dns_srv(),
@@ -573,6 +579,11 @@ class AutoEnrollment:
         logger.info("Domain: %s", self.domain)
         logger.info("Realm: %s", self.realm)
         logger.info("Servers: %s", ", ".join(self.servers))
+        logger.info(
+            "Extra install args: %s",
+            # Python 3.6 has no shlex.join()
+            " ".join(shlex.quote(arg) for arg in self.install_args),
+        )
         return j
 
     def hcc_register(self) -> dict:
@@ -622,6 +633,7 @@ class AutoEnrollment:
         if self.args.force:
             cmd.append("--force")
         cmd.append("--unattended")
+        cmd.extend(self.install_args)
 
         return self._run(cmd)
 

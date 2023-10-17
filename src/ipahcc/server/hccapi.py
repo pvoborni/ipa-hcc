@@ -583,6 +583,11 @@ class HCCAPI:
             result.append(loc)
         return result
 
+    def _get_automount_locations(self) -> typing.List[str]:
+        locations = self.api.Command.automountlocation_find()
+        result = [_get_one(entry, "cn") for entry in locations["result"]]
+        return result
+
     def _get_ipa_config(
         self, all_fields=False
     ) -> typing.Dict[str, typing.Any]:
@@ -603,6 +608,7 @@ class HCCAPI:
                 "ca_certs": self._get_ca_certs(),
                 "realm_domains": self._get_realm_domains(),
                 "locations": self._get_locations(),
+                "automount_locations": self._get_automount_locations(),
             },
         }
 

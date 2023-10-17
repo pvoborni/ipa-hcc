@@ -36,6 +36,7 @@ COMMON_RESULT: typing.Dict[str, typing.Any] = {
             {"name": "sigma"},
             {"name": "tau", "description": "location tau"},
         ],
+        "automount_locations": ["default"],
         "realm_domains": [conftest.DOMAIN],
     },
 }
@@ -143,6 +144,9 @@ class TestHCCAPICommon(conftest.IPABaseTests):
                     "description": ("location tau",),
                 },
             ),
+        }
+        self.m_api.Command.automountlocation_find.return_value = {
+            "result": ({"cn": ("default",)},),
         }
         self.m_api.Command.hccjwk_find.return_value = {
             "result": [
