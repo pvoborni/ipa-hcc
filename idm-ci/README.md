@@ -40,14 +40,14 @@ number. Contact RH customer support to add an EBS number to an account.
 $ podman login quay.io
 ```
 
-```
-$ make run-idm-ci
-```
-
-Log into RH Kerberos realm. mrack uses Kerberos to provision machines.
+Log into RH Kerberos realm. mrack uses the Kerberos principal as machine owner.
 
 ```
 # kinit your-kerberos-name
+```
+
+```
+$ make run-idm-ci
 ```
 
 Source settings and secrets (use `idm-ci/secrets.example` as template)

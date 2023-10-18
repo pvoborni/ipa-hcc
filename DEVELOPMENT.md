@@ -82,6 +82,17 @@ build and install `ipa-hcc` packages, and to run some smoke tests. The
 framework can also be used to provision test machines to deploy local
 changes and debug them interactively.
 
+## OpenStack cloud authentication (one-time setup)
+
+Follow the instructions from the idm-ci
+[user guide](https://docs-idmci.psi.redhat.com/user_docs/guide.html#openstack_auth):
+
+* log into `rhos-01` with your Kerberos name, PIN+OTP, and domain `redhat.com`.
+* create an application and save the `clouds.yaml` as
+  `~/.config/openstack/clouds.yaml`
+* edit `clouds.yaml` and append `/v3` to `auth_url`
+
+
 ## Quick start
 
 1) Log into quay.io in order to access the private container
@@ -89,8 +100,8 @@ changes and debug them interactively.
 podman login quay.io
 ```
 
-2) Copy one of the `idm-ci/secret*.example` files to `idm-ci/secret*` and
-fill-in the missing values.
+2) Make a working copy of one of the `idm-ci/secret*.example` and fill-in the
+   missing values (e.g. `cp idm-ci/secrets.example idm-ci/secrets`).
 
 * `idm-ci/secret.example` is for testing with stage or prod CRC. Hosts are
   registered with RHSM, `rhc`, and Insights. Tests use a local `mockapi`
@@ -100,17 +111,21 @@ fill-in the missing values.
 * `idm-ci/secrets.compose.example` uses a compose of `idm-domains-backend`
   on a VM.
 
-3) Start the container, log into Kerberos, source settings
+3) Start the log into Kerberos, container, source settings
 
-On the host:
+On the **host** system, log into internal Kerberos realm. Your Kerberos
+login is passed to *mrack* as VM owner.
+
+```sh
+kinit your-kerberos-realm
+```
+
+On the host, start the container:
 ```sh
 make run-idm-ci
 ```
 
-Log into RH Kerberos realm. mrack uses Kerberos to provision machines:
-```sh
-kinit your-kerberos-name
-```
+Inside the container, source the secrets file
 
 ```sh
 . idm-ci/secrets
@@ -145,7 +160,7 @@ missing EBS number, and you have to contact Red Hat support. The stage console
 is only availabel to Red Hat engineers. Please refer to internal developer
 documentation how to create an account on Ethel and how to set up VPN and proxy.
 
-* `cp idm-ci/secrets.example idm-i/secrets`
+* `cp idm-ci/secrets.example idm-ci/secrets`
 * Set `RHC_ENV` to `prod` or `stage` in your `idm-ci/secrets` file.
 * Create an activation key 
   [prod](https://access.redhat.com/management/activation_keys) /
@@ -229,11 +244,11 @@ systemctl restart httpd.service
 
 ## podman-compose on a VM
 
-* `cp idm-ci/secrets.compose.example idm-i/secrets.compose`
+* `cp idm-ci/secrets.compose.example idm-ci/secrets.compose`
 * Adjust `BACKEND_GIT_REPO` and `BACKEND_GIT_BRANCH` if you like to test a branch
 
 ```sh
-. idm-i/secrets.compose
+. idm-ci/secrets.compose
 te --upto test idm-ci/metadata/hmsidm-domains-backend.yaml
 ```
 

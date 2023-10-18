@@ -119,10 +119,25 @@ test:
 
 .PHONY: run-idm-ci
 run-idm-ci:
+	@# idm-ci needs OpenStack cloud config
+	@if [[ ! -f ~/.config/openstack/clouds.yaml ]]; then \
+		echo '~/.config/openstack/clouds.yaml is missing'; \
+		exit 2; \
+	fi
+
+	@if [[ $$(klist 2>&1 | grep -q REDHAT.COM) ]]; then \
+		echo 'No Kerberos ticket found'; \
+		exit 2; \
+	fi
+
 	@# tmpfs at /root/.ansible is needed to work around an SELinux violation
 	@# when copying files from fusefs to mount point.
+	MRACK_VM_OWNER=$(shell python3 -c 'from gssapi import Credentials; c = Credentials(usage="initiate"); print(str(c.name).split("@")[0])'); \
 	podman run -ti --rm \
-		-v $(PWD):/ipa-hcc:Z \
+		-v ~/.config/openstack/clouds.yaml:/root/.config/openstack/clouds.yaml:z,ro \
+		-e OS_CLOUD=$${OS_CLOUD:-openstack} \
+		-e MRACK_VM_OWNER=$$MRACK_VM_OWNER \
+		-v $(PWD):/ipa-hcc:z \
 		-w /ipa-hcc \
 		--tmpfs /root/.ansible:rw,mode=750 \
 		quay.io/idmops/idm-ci:latest /bin/bash

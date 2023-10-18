@@ -4,7 +4,6 @@ import tempfile
 from unittest import mock
 
 from ipalib import errors
-from ipaplatform.services import knownservices
 from ipapython.kerberos import Principal
 
 import conftest
@@ -52,7 +51,7 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
         self.addCleanup(p.stop)
 
         p = mock.patch.multiple(
-            "ipaplatform.services.knownservices",
+            "ipaserver.install.plugins.update_hcc.knownservices",
             gssproxy=mock.Mock(),
             httpd=mock.Mock(),
             krb5kdc=mock.Mock(),
@@ -65,7 +64,10 @@ class TestIPAServerUpdates(conftest.IPABaseTests):
             content = f.read()
         self.assertEqual(content.count("pkinit_anchors = "), 2)
 
-        from ipaserver.install.plugins.update_hcc import update_hcc
+        from ipaserver.install.plugins.update_hcc import (
+            knownservices,
+            update_hcc,
+        )
 
         updater = update_hcc(self.m_api)
 
