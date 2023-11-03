@@ -224,6 +224,13 @@ development header. The `dev_username` and `dev_password` are required to
 authenticate HTTPS requests with ephemeral's ingress. Otherwise requests
 won't even reach the backend.
 
+The config file must created before the IPA server/replica is installed. In
+case a system is already a server and `ipa-hcc-server` package is installed
+after the fact, then the `hcc.conf` file must be created, before the package
+is installed. The package hooks into IPA's update system. Without `hcc.conf`,
+the hooks assume that `ipa-hcc` connects to production and subscription manager
+certificate is present.
+
 ```ini
 [hcc]
 token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token
@@ -232,6 +239,7 @@ inventory_api_url=https://console.invalid/api/inventory/v1
 idmsvc_api_url=https://IDMSVC-BACKEND/api/idmsvc/v1
 dev_org_id=12345
 dev_cert_cn=6f324116-b3d2-11ed-8a37-482ae3863d30
+# oc get secrets/env-$(oc project -q)-keycloak -o jsonpath='{.data.defaultUsername}' | base64 -d
 dev_username=jdoe
 # oc get secrets/env-$(oc project -q)-keycloak -o jsonpath='{.data.defaultPassword}' | base64 -d
 dev_password=PASSWORD
@@ -277,3 +285,42 @@ te --phase teardown idm-ci/metadata/hmsidm-dev.yaml
 
 You can achieve even faster test cycles by `rsync`ing local checkout to
 the server and then running `./install.sh` on the server.
+
+
+## Testing / verification
+
+- Every server has a `hcc-enrollment/$FQDN` service account with a
+  `/var/lib/gssproxy/hcc-enrollment.keytab` Kerberos keytab file.
+- Every server runs a `ipa-hcc` `mod_wsgi` process as effective user
+  `ipahcc`. `ps aux` typically lists the process as `(wsgi:ipa-hcc)`.
+- Every has a `gssproxy` rule that allows processes with effective UID
+  `ipahcc` to acquire a Kerberos ticket:
+
+  ```shell
+  # sudo -u ipahcc -s /bin/bash
+  $ export GSS_USE_PROXY=1
+  $ export HOME=/tmp/ipahcc
+  $ kdestroy -A
+  $ ipa ping
+  --------------------------------------------
+  IPA server version 4.10.2. API version 2.252
+  --------------------------------------------
+
+  $ klist
+  Ticket cache: KCM:388:20604
+  Default principal: hcc-enrollment/server.ipahcc.example@IPAHCC.EXAMPLE
+
+  Valid starting     Expires            Service principal
+  12/31/69 19:00:00  12/31/69 19:00:00  Encrypted/Credentials/v1@X-GSSPROXY:
+  ```
+
+- Prod/Stage-only: `ipa config-show` shows `HCC organization id` with the
+  same org id as the RHSM certificate
+  (`openssl x509 -subject -noout -in /etc/pki/consumer/cert.pem`)
+- After register: `ipa config-show` shows `HCC domain id`.
+- `ipa server-role-find --role "HCC Enrollment server"` shows all IPA servers
+  with the `ipa-hcc-server` package.
+- Prod/Stage-only: `ipa host-show` for all IPA servers with `ipa-hcc-server`
+  package show `HCC organization id`, `HCC subscription id`, and
+  `RHSM certificate subject` with same values as the RHSM cert. The
+  subject string does not contain spaces.

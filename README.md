@@ -206,6 +206,10 @@ dnf copr enable @podengo/ipa-hcc
 dnf install --refresh ipa-hcc-server
 ```
 
+**NOTE** It is possible to install a server/replica with `ipa-hcc-server`
+package pre-installed. Both variants are supported and yield the same result.
+The token and `/etc/ipa/hcc.conf` must be set before the server is installed.
+
 ## Client test setup
 
 1) Install packages
