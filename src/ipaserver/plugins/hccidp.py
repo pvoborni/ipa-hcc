@@ -14,9 +14,12 @@ Therefore it does not use authentication with a client secret.
 ipa idp-add --provider=sso.redhat.com --client-id=YOUR_CLIENT_ID ssorhc
 ipa user-mod --user-auth-type=idp --idp=ssorhc --idp-user-id=YOUR_SSO_LOGIN YOUR_USER
 
-Scopes:
- - `id.organization` provides claim `organization.id` (required)
- - `id.username` provides claim `preferred_username` (required), aka SSO login name.
+The `openid` is required since Keycloak 19.0.2. Otherwise userinfo requests
+are failing with `403 insufficient_scope`
+https://www.keycloak.org/docs/latest/upgrading/index.html#userinfo-endpoint-changes
+
+The `openid` scope includes (amongst others) `organization.id`, `email`, and
+`preferred_username`.
 """
 from ipalib.text import _
 from ipaserver.plugins.idp import idp_add
@@ -32,7 +35,7 @@ SSO_PROVIDERS = {
         "ipaidptokenendpoint": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
         "ipaidpuserinfoendpoint": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/userinfo",
         "ipaidpkeysendpoint": "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/certs",
-        "ipaidpscope": "id.organization id.username",
+        "ipaidpscope": "openid",
         "ipaidpsub": "preferred_username",
     }
 }
@@ -44,7 +47,7 @@ if hccplatform.DEVELOPMENT_MODE:
         "ipaidptokenendpoint": "https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token",
         "ipaidpuserinfoendpoint": "https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/userinfo",
         "ipaidpkeysendpoint": "https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/certs",
-        "ipaidpscope": "id.organization id.username",
+        "ipaidpscope": "openid",
         "ipaidpsub": "preferred_username",
     }
 
