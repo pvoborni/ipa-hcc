@@ -3,7 +3,6 @@
 import base64
 import json
 import logging
-import os
 import typing
 import uuid
 from http.client import responses as http_responses
@@ -672,8 +671,10 @@ class HCCAPI:
         else:
             auth = None
             cert = (hccplatform.RHSM_CERT, hccplatform.RHSM_KEY)
-            if not os.access(cert[0], os.R_OK):
-                raise PermissionError(cert[0])
+            # open cert in reading mode to check that the file exists and is
+            # readable by current user and SELinux context.
+            with open(hccplatform.RHSM_CERT, "rb") as f:
+                f.read()
 
         logger.debug("Sending %s request to %s", method, url)
         logger.debug("headers: %s", headers)
