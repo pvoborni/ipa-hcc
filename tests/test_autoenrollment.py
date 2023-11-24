@@ -135,12 +135,30 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             "--domain-id", conftest.DOMAIN_ID,
             "--location", "sigma",
             "--upto", "host-conf",
-            "--override-server", conftest.SERVER_FQDN,
+            "--override-ipa-server", conftest.SERVER_FQDN,
             "--hcc-api-host", conftest.SERVER_FQDN,
             # fmt: on
         )
         self.assertEqual(args.timeout, 20)
         self.assertEqual(args.hcc_api_host, conftest.SERVER_FQDN)
+        self.assertEqual(args.dev_username, None)
+        self.assertEqual(args.dev_cert_cn, None)
+
+        if auto_enrollment.DEVELOPMENT_MODE:
+            args = self.parse_args(
+                # fmt: off
+                "--hostname", conftest.CLIENT_FQDN,
+                "--hcc-api-host", conftest.SERVER_FQDN,
+                "--dev-username", "jdoe",
+                "--dev-password", "example",
+                "--dev-org-id", conftest.ORG_ID,
+                "--dev-cert-cn", conftest.CLIENT_RHSM_ID,
+                # fmt: on
+            )
+            self.assertEqual(args.dev_username, "jdoe")
+            self.assertEqual(args.dev_org_id, conftest.ORG_ID)
+            self.assertEqual(args.dev_cert_cn, conftest.CLIENT_RHSM_ID)
+
         self.assert_args_error(("--hostname", "invalid_hostname"))
         self.assert_args_error(
             ("--hostname", "localhost"), "FQDN is not configured"

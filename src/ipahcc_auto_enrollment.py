@@ -11,6 +11,7 @@ Installation with older clients that lack PKINIT:
 """
 
 import argparse
+import base64
 import json
 import logging
 import os
@@ -27,7 +28,7 @@ import uuid
 from urllib.request import HTTPError, Request, urlopen
 
 from dns.exception import DNSException
-from ipalib import util
+from ipalib import util, x509
 from ipaplatform.osinfo import osinfo
 from ipaplatform.paths import paths
 from ipapython.dnsutil import query_srv
@@ -40,6 +41,7 @@ FQDN = socket.gethostname()
 VERSION = "0.12"
 
 # copied from ipahcc.hccplatform
+DEVELOPMENT_MODE = True
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
 RHSM_KEY = "/etc/pki/consumer/key.pem"
 RHSM_CONF = "/etc/rhsm/rhsm.conf"
@@ -180,6 +182,44 @@ group.add_argument(
     type=check_arg_location,
     default=None,
 )
+
+# ephemeral testing
+parser.set_defaults(
+    dev_username=None,
+    dev_password=None,
+    dev_org_id=None,
+    dev_cert_cn=None,
+)
+if DEVELOPMENT_MODE:
+    group = parser.add_argument_group("Ephemeral testing")
+    # presence of --dev-username enables Ephemeral login and fake identity
+    group.add_argument(
+        "--dev-username",
+        metavar="USERNAME",
+        help="Ephemeral basic auth user",
+        type=str,
+    )
+    group.add_argument(
+        "--dev-password",
+        metavar="PASSWORD",
+        help="Ephemeral basic auth password",
+        type=str,
+    )
+    # If --dev-cert-cn is given, the RHSM cert is ignored. Otherwise the org id
+    # and system CN are read from the certificate.
+    group.add_argument(
+        "--dev-org-id",
+        metavar="ORG_ID",
+        help="Override org id for systems without RHSM cert",
+        type=str,
+    )
+    group.add_argument(
+        "--dev-cert-cn",
+        metavar="CERT_CN",
+        help="Override RHSM CN for systems without RHSM cert",
+        type=str,
+    )
+
 # hidden arguments for internal testing
 parser.add_argument(
     "--upto",
@@ -188,7 +228,7 @@ parser.add_argument(
     choices=("host-conf", "register"),
 )
 parser.add_argument(
-    "--override-server",
+    "--override-ipa-server",
     metavar="SERVER",
     help=argparse.SUPPRESS,
     type=check_arg_hostname,
@@ -232,6 +272,57 @@ class AutoEnrollment:
             shutil.rmtree(self.tmpdir)
             self.tmpdir = None
 
+    def _ephemeral_config(self, req: Request) -> None:
+        """Configure for Ephemeral environment"""
+        logger.info("Configure urlopen for ephemeral basic auth")
+        # HTTPBasicAuthHandler is a mess, manually create auth header
+        creds = f"{self.args.dev_username}:{self.args.dev_password}"
+        basic_auth = base64.b64encode(creds.encode("utf-8")).decode("ascii")
+        req.add_unredirected_header("Authorization", f"Basic {basic_auth}")
+
+        org_id = self.args.dev_org_id
+        cn = self.args.dev_cert_cn
+        if cn is None or org_id is None:
+            cert = x509.load_certificate_from_file(RHSM_CERT)
+            nas = list(cert.subject)
+            org_id = nas[0].value
+            cn = nas[1].value
+            logger.info(
+                "Using cert info from %s: org_id: %s, cn: %s",
+                RHSM_CERT,
+                org_id,
+                cn,
+            )
+        else:
+            logger.info(
+                "Using cert info from CLI: org_id: %s, cn: %s", org_id, cn
+            )
+
+        fake_identity = {
+            "identity": {
+                "account_number": "11111",
+                "org_id": org_id,
+                "type": "System",
+                "auth_type": "cert-auth",
+                "system": {
+                    "cert_type": "system",
+                    "cn": cn,
+                },
+                "internal": {
+                    "auth_time": 900,
+                    "cross_access": False,
+                    "org_id": org_id,
+                },
+            }
+        }
+        req.add_header(
+            "X-Rh-Fake-Identity",
+            base64.b64encode(
+                json.dumps(fake_identity).encode("utf-8")
+            ).decode("ascii"),
+        )
+        req.add_header("X-Rh-Insights-Request-Id", str(uuid.uuid4()))
+
     def _do_json_request(
         self,
         url: str,
@@ -266,8 +357,13 @@ class AutoEnrollment:
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
 
+        if DEVELOPMENT_MODE and self.args.dev_username:
+            self._ephemeral_config(req)
+
         with urlopen(  # noqa: S310
-            req, timeout=self.args.timeout, context=context
+            req,
+            timeout=self.args.timeout,
+            context=context,
         ) as resp:  # nosec
             j = json.load(resp)
         logger.debug("Server response: %s", j)
@@ -572,10 +668,10 @@ class AutoEnrollment:
         # TODO: use all servers
         if typing.TYPE_CHECKING:
             assert self.servers
-        if self.args.override_server is None:
+        if self.args.override_ipa_server is None:
             self.server = self.servers[0]
         else:
-            self.server = self.args.override_server
+            self.server = self.args.override_ipa_server
         logger.info("Domain: %s", self.domain)
         logger.info("Realm: %s", self.realm)
         logger.info("Servers: %s", ", ".join(self.servers))
@@ -628,8 +724,8 @@ class AutoEnrollment:
         for anchor in self.pkinit_anchors:
             cmd.extend(["--pkinit-anchor", anchor])
         # TODO: Make ipa-client-install prefer servers from current location.
-        if self.args.override_server:
-            cmd.extend(["--server", self.args.override_server])
+        if self.args.override_ipa_server:
+            cmd.extend(["--server", self.args.override_ipa_server])
         if self.args.force:
             cmd.append("--force")
         cmd.append("--unattended")
