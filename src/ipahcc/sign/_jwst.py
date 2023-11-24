@@ -33,7 +33,7 @@ ISSUER = "idmsvc/v1"
 AUD_JOIN_HOST = "join host"
 CLAIM_ORG_ID = "rhorg"
 CLAIM_DOMAIN_ID = "rhdomid"
-CLAIM_FDQN = "rhfdqn"
+CLAIM_FQDN = "rhfqdn"
 CLAIM_INVENTORY_ID = "rhinvid"
 
 CHECKED_HOST_CLAIMS = {
@@ -56,7 +56,7 @@ CHECKED_HOST_CLAIMS = {
     # host-based inventory id (uuid string)
     CLAIM_INVENTORY_ID: None,
     # client's fqdn (str)
-    CLAIM_FDQN: None,
+    CLAIM_FQDN: None,
     # domain_id (uuid string)
     CLAIM_DOMAIN_ID: None,
 }  # type: typing.Dict[str, typing.Union[str, int, typing.List[str], None]]
@@ -234,7 +234,7 @@ def validate_host_token(
             "sub": cert_cn,
             CLAIM_ORG_ID: cert_o,
             CLAIM_INVENTORY_ID: inventory_id,
-            CLAIM_FDQN: fqdn,
+            CLAIM_FQDN: fqdn,
             CLAIM_DOMAIN_ID: domain_id,
         }
     )
@@ -276,7 +276,7 @@ def generate_host_token(
         "sub": cert_cn,
         CLAIM_ORG_ID: cert_o,
         CLAIM_INVENTORY_ID: inventory_id,
-        CLAIM_FDQN: fqdn,
+        CLAIM_FQDN: fqdn,
         CLAIM_DOMAIN_ID: domain_id,
         # use 6 random bytes -> 8 characters as random id
         # Our tokens are valid for mere hours, 48 random bits are sufficient.

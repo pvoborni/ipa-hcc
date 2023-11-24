@@ -1,3 +1,4 @@
+import abc
 import datetime
 from _typeshed import Incomplete
 from collections.abc import Generator
@@ -21,7 +22,7 @@ EKU_PLACEHOLDER: str
 SAN_UPN: str
 SAN_KRB5PRINCIPALNAME: str
 
-class IPACertificate(crypto_x509.Certificate):
+class IPACertificate(crypto_x509.Certificate, metaclass=abc.ABCMeta):
     backend: Incomplete
     def __init__(self, cert, backend: Incomplete | None = ...) -> None: ...
     def __eq__(self, other): ...
