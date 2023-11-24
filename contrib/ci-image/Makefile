@@ -1,7 +1,7 @@
 PREFIX = quay.io/podengo/ipa-hcc-ci
 
-.PHONY: all 8 9 f37 f38 push
-all: 8 9 f37 f38
+.PHONY: all 8 9 f38 f39 push
+all: 8 9 f38 f39
 
 8: ipa-hcc.spec
 	podman build -f Containerfile.$@ -t $(PREFIX):$@ .
@@ -9,17 +9,18 @@ all: 8 9 f37 f38
 9: ipa-hcc.spec
 	podman build -f Containerfile.$@ -t $(PREFIX):$@ .
 
-f37: requirements.txt ipa-hcc.spec
-	podman build -f Containerfile.fedora --build-arg=VERSION=37 -t $(PREFIX):$@ .
 
 f38: requirements.txt ipa-hcc.spec
 	podman build -f Containerfile.fedora --build-arg=VERSION=38 -t $(PREFIX):$@ .
 
-push: 8 9 f37 f38
+f39: requirements.txt ipa-hcc.spec
+	podman build -f Containerfile.fedora --build-arg=VERSION=39 -t $(PREFIX):$@ .
+
+push: 8 9 f38 f39
 	podman push $(PREFIX):8
 	podman push $(PREFIX):9
-	podman push $(PREFIX):f37
 	podman push $(PREFIX):f38
+	podman push $(PREFIX):f39
 
 requirements.txt: ../../requirements.txt
 	cp -a $^ $@

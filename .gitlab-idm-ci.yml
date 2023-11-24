@@ -2,7 +2,7 @@
 # current RHEL versions
 srv92_c88_92:
   extends: .mr_template
-  needs: ["rpms", "tox_check_f37", "tox_check_f38"]
+  needs: ["rpms", "tox_check_f38", "tox_check_f39"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92.yaml
     RHC_ENV: "stage"
@@ -14,7 +14,7 @@ srv92_c88_92:
 # test with idm-domains-backend, does not use RHC
 srv92_backend:
   extends: .mr_template
-  needs: ["rpms", "tox_check_f37", "tox_check_f38"]
+  needs: ["rpms", "tox_check_f38", "tox_check_f39"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92-backend.yaml
     RHC_ENV: "compose"

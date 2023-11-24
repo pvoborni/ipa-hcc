@@ -21,8 +21,8 @@ jobs:
           - "ruff,mypy,pylint"
           - "jslint,yamllint,maketest"
         image:
-          - quay.io/podengo/ipa-hcc-ci:f37
           - quay.io/podengo/ipa-hcc-ci:f38
+          - quay.io/podengo/ipa-hcc-ci:f39
     steps:
       - uses: "actions/checkout@v3"
         with:

@@ -23,13 +23,13 @@ stages:
   only:
     - merge_requests
 
-tox_check_f37:
-  extends: .tox_check_template
-  image: quay.io/podengo/ipa-hcc-ci:f37
-
 tox_check_f38:
   extends: .tox_check_template
   image: quay.io/podengo/ipa-hcc-ci:f38
+
+tox_check_f39:
+  extends: .tox_check_template
+  image: quay.io/podengo/ipa-hcc-ci:f39
 
 srpm:
   tags:
