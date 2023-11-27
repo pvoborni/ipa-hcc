@@ -1,1 +1,1 @@
-AUTO_ENROLLMENT_ARGS="--insecure --hcc-api-host {{ hostvars[groups.ipaserver.0].meta_fqdn }}"
+AUTO_ENROLLMENT_ARGS="--insecure --idmsvc-api-url https://{{ hostvars[groups.ipaserver.0].meta_fqdn }}/api/idmsvc/v1"

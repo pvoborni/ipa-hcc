@@ -152,12 +152,12 @@ parser.add_argument(
     type=int,
     default=10,
 )
-DEFAULT_HCC_API_HOST = "cert.console.redhat.com"
+DEFAULT_IDMSVC_API_URL = "https://cert.console.redhat.com/api/idmsvc/v1"
 parser.add_argument(
-    "--hcc-api-host",
+    "--idmsvc-api-url",
     help=(
         "URL of Hybrid Cloud Console API with cert auth "
-        f"(default: {DEFAULT_HCC_API_HOST})"
+        f"(default: {DEFAULT_IDMSVC_API_URL})"
     ),
     default=None,
 )
@@ -629,8 +629,8 @@ class AutoEnrollment:
             if value is not None:
                 body[key] = value
 
-        url = "https://{api_host}/api/idmsvc/v1/host-conf/{inventory_id}/{hostname}".format(
-            api_host=self.args.hcc_api_host,
+        url = "{api_url}/host-conf/{inventory_id}/{hostname}".format(
+            api_url=self.args.idmsvc_api_url.rstrip("/"),
             inventory_id=self.inventory_id,
             hostname=self.args.hostname,
         )
@@ -741,8 +741,8 @@ def main(args=None):
         format="%(levelname)s: %(message)s",
     )
 
-    if not args.hcc_api_host:
-        parser.error("--hcc-api-host required\n")
+    if not args.idmsvc_api_url:
+        parser.error("--idmsvc-api-url required\n")
 
     with AutoEnrollment(args) as autoenrollment:
         autoenrollment.enroll_host()

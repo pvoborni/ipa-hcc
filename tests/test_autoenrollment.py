@@ -45,6 +45,8 @@ REGISTER_REQUEST = {
 
 REGISTER_RESPONSE = {"status": "ok", "kdc_cabundle": conftest.KDC_CA_DATA}
 
+IDMSVC_API_URL = f"https://{conftest.SERVER_FQDN}/api/idmsvc/v1"
+
 
 def jsonio(body):
     j = json.dumps(body).encode("utf-8")
@@ -116,7 +118,15 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         schema.validate_schema(REGISTER_RESPONSE, "HostRegisterResponse")
 
     def parse_args(self, *args):
-        return auto_enrollment.parser.parse_args(args=args)
+        # hostname is required because some test machines don't have a FQDN
+        # as hostname. idmsvc-api-url default is currently set to None.
+        default_args = (
+            "--hostname",
+            conftest.CLIENT_FQDN,
+            "--idmsvc-api-url",
+            IDMSVC_API_URL,
+        )
+        return auto_enrollment.parser.parse_args(args=default_args + args)
 
     def assert_args_error(self, args, expected=None):
         with self.assertRaises(SystemExit):
@@ -129,26 +139,22 @@ class TestAutoEnrollment(conftest.IPABaseTests):
     def test_args(self):
         args = self.parse_args(
             # fmt: off
-            "--hostname", conftest.CLIENT_FQDN,
             "--timeout", "20",
             "--domain-name", conftest.DOMAIN,
             "--domain-id", conftest.DOMAIN_ID,
             "--location", "sigma",
             "--upto", "host-conf",
             "--override-ipa-server", conftest.SERVER_FQDN,
-            "--hcc-api-host", conftest.SERVER_FQDN,
             # fmt: on
         )
         self.assertEqual(args.timeout, 20)
-        self.assertEqual(args.hcc_api_host, conftest.SERVER_FQDN)
+        self.assertEqual(args.idmsvc_api_url, IDMSVC_API_URL)
         self.assertEqual(args.dev_username, None)
         self.assertEqual(args.dev_cert_cn, None)
 
         if auto_enrollment.DEVELOPMENT_MODE:
             args = self.parse_args(
                 # fmt: off
-                "--hostname", conftest.CLIENT_FQDN,
-                "--hcc-api-host", conftest.SERVER_FQDN,
                 "--dev-username", "jdoe",
                 "--dev-password", "example",
                 "--dev-org-id", conftest.ORG_ID,
@@ -172,8 +178,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
 
     def test_system_state_error(self):
         args = (
-            "--hcc-api-host",
-            conftest.SERVER_FQDN,
+            "--idmsvc-api-url",
+            IDMSVC_API_URL,
             "--hostname",
             conftest.CLIENT_FQDN,
         )
@@ -226,7 +232,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertEqual(r, [s1, s4, s3, s2])
 
     def test_basic(self):
-        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        args = self.parse_args()
         ae = auto_enrollment.AutoEnrollment(args)
         self.assertEqual(ae.tmpdir, None)
         with ae:
@@ -238,7 +244,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertFalse(os.path.isdir(tmpdir))
 
     def test_inventory_from_host_details(self):
-        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        args = self.parse_args()
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             self.assertEqual(ae.inventory_id, None)
@@ -246,7 +252,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(ae.inventory_id, conftest.CLIENT_INVENTORY_ID)
 
     def test_inventory_from_api(self):
-        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        args = self.parse_args()
         auto_enrollment.INSIGHTS_HOST_DETAILS = conftest.NO_FILE
         # first call to urlopen gets host details from API
         with open(conftest.HOST_DETAILS, encoding="utf-8") as f:
@@ -268,12 +274,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertEqual(req.get_method(), "GET")
 
     def test_hcc_host_conf(self):
-        args = self.parse_args(
-            "--hostname",
-            conftest.CLIENT_FQDN,
-            "--hcc-api-host",
-            conftest.SERVER_FQDN,
-        )
+        args = self.parse_args()
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             ae.get_host_details()
@@ -308,7 +309,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(ae.server, conftest.SERVER_FQDN)
 
     def test_hcc_register(self):
-        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        args = self.parse_args()
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             ae.get_host_details()
@@ -338,7 +339,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(data, conftest.KDC_CA_DATA)
 
     def test_enroll_host(self):
-        args = self.parse_args("--hostname", conftest.CLIENT_FQDN)
+        args = self.parse_args()
 
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
