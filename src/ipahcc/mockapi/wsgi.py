@@ -11,7 +11,6 @@ testing, though.
 """
 
 import logging
-import os
 import typing
 from time import monotonic as monotonic_time
 
@@ -20,6 +19,7 @@ from ipalib import errors
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform, sign
+from ipahcc.server import hccapi
 from ipahcc.server.framework import UUID_RE, HTTPException, JSONWSGIApp, route
 
 from . import domain_token
@@ -38,7 +38,7 @@ class Application(JSONWSGIApp):
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
-        self.priv_key, self.raw_pub_key = self._load_jwk()
+        self.hccapi = hccapi.HCCAPI(self.api)
 
     def before_call(self) -> None:
         # self._connect_ipa() is called on demand
@@ -49,30 +49,16 @@ class Application(JSONWSGIApp):
         # force refresh
         self._reset_ipa_config()
 
-    def _load_jwk(self) -> typing.Tuple[sign.JWKDict, str]:
-        if not os.path.isfile(hccplatform.MOCKAPI_PRIV_JWK):
-            logger.warning(
-                "Generating mockapi JWK %s", hccplatform.MOCKAPI_PRIV_JWK
-            )
-            priv_key = sign.generate_private_key()
-            with open(
-                hccplatform.MOCKAPI_PRIV_JWK, "w", encoding="utf-8"
-            ) as f:
-                f.write(priv_key.export_private())
-            with open(
-                hccplatform.MOCKAPI_PUB_JWK, "w", encoding="utf-8"
-            ) as f:
-                f.write(priv_key.export_public())
-
+    def _load_jwk(self) -> typing.Optional[sign.JWKDict]:
         logger.info(
             "Loading mockapi JWK from %s", hccplatform.MOCKAPI_PRIV_JWK
         )
-        with open(hccplatform.MOCKAPI_PRIV_JWK, "r", encoding="utf-8") as f:
-            priv_key = sign.load_key(f.read())
-        with open(hccplatform.MOCKAPI_PUB_JWK, "r", encoding="utf-8") as f:
-            raw_pub_key = f.read()
-
-        return priv_key, raw_pub_key
+        try:
+            with open(hccplatform.MOCKAPI_PRIV_JWK, "r", encoding="utf-8") as f:
+                return sign.load_key(f.read())
+        except OSError:
+            logger.exception("Unable to load %s", hccplatform.MOCKAPI_PRIV_JWK)
+            return None
 
     def get_access_token(self) -> str:  # pragma: no cover
         """Get a bearer access token from an offline token
@@ -214,7 +200,11 @@ class Application(JSONWSGIApp):
     def handle_keys(  # pylint: disable=unused-argument
         self, env: dict, body: dict
     ) -> dict:
-        return {"keys": [self.raw_pub_key], "revoked_kids": ["bad key id"]}
+        if not self._is_connected():
+            self._connect_ipa()
+        jwkset = self.hccapi.get_ipa_jwkset()
+        keys = [jwk.export_public() for jwk in jwkset]
+        return {"keys": keys, "revoked_kids": ["bad key id"]}
 
     @route(
         "POST",
@@ -236,7 +226,11 @@ class Application(JSONWSGIApp):
             raise HTTPException(
                 400, f"Invalid org_id: {org_id} != {self.org_id}"
             )
-
+        priv_key = self._load_jwk()
+        if priv_key is None:
+            raise HTTPException(
+                500, "unable to load MockAPI private JWK from disk"
+            )
         logger.warning(
             "Received host configuration request for "
             "org O=%s, CN=%s, FQDN %s, inventory %s",
@@ -257,7 +251,7 @@ class Application(JSONWSGIApp):
             self.api.env.domain,
         )
         tok = sign.generate_host_token(
-            self.priv_key,
+            priv_key,
             cert_o=str(org_id),
             cert_cn=rhsm_id,
             inventory_id=inventory_id,

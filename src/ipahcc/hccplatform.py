@@ -13,7 +13,7 @@ import os
 from typing import Optional
 
 from ipalib.facts import is_ipa_configured
-from ipaplatform.constants import constants
+from ipaplatform.constants import User, constants
 from ipaplatform.osinfo import osinfo
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
@@ -35,8 +35,8 @@ HTTP_HEADERS = {
 
 # HCC enrollment agent (part pf ipa-hcc-server-plugin)
 HCC_ENROLLMENT_AGENT = "hcc-enrollment"
-HCC_ENROLLMENT_AGENT_USER = "ipahcc"
-HCC_ENROLLMENT_AGENT_GROUP = getattr(constants, "IPAAPI_GROUP", "ipaapi")
+HCC_ENROLLMENT_AGENT_USER = User("ipahcc")
+HCC_ENROLLMENT_AGENT_GROUP = constants.IPAAPI_GROUP
 HCC_ENROLLMENT_AGENT_CACHE_DIR = "/var/cache/ipa-hcc"
 # Note: gssproxy directory comes with correct SELinux roles.
 HCC_ENROLLMENT_AGENT_KEYTAB = "/var/lib/gssproxy/hcc-enrollment.keytab"
@@ -64,9 +64,6 @@ HCC_DOMAIN_TYPE = "rhel-idm"  # noqa: S105
 DEVELOPMENT_MODE = True
 MOCKAPI_PRIV_JWK = os.path.join(
     HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-priv-jwk.json"
-)
-MOCKAPI_PUB_JWK = os.path.join(
-    HCC_ENROLLMENT_AGENT_CACHE_DIR, "mockapi-pub-jwk.json"
 )
 TEST_DOMREG_KEY = b"secretkey"
 

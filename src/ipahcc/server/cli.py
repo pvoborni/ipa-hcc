@@ -31,6 +31,7 @@ parser = argparse.ArgumentParser(
             "",
             "  %(prog)s [options] register TOKEN",
             "  %(prog)s [options] update [--update-server-only]",
+            "  %(prog)s [options] update-jwk",
             "  %(prog)s [options] status",
         ]
     ),
@@ -174,6 +175,8 @@ def main(args=None):
     ipalib.api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
     ipalib.api.finalize()
 
+    jwk_result: typing.Optional[hccapi.APIResult] = None
+
     with hccapi.HCCAPI(api=ipalib.api, timeout=args.timeout) as api:
         try:
             if args.action == "register":
@@ -186,8 +189,10 @@ def main(args=None):
                             status=0, message="Registration cancelled\n"
                         )
                 _, result = api.register_domain(args.token)
+                _, jwk_result = api.update_jwk()
             elif args.action == "update":
                 _, result = api.update_domain(args.update_server_only)
+                _, jwk_result = api.update_jwk()
             elif args.action == "update-jwk":
                 _, result = api.update_jwk()
             elif args.action == "status":
@@ -202,6 +207,10 @@ def main(args=None):
             parser.exit(e.result.exit_code)
         else:
             logger.debug("APIResult: %s", pprint.pformat(result.asdict()))
+            if jwk_result is not None:
+                logger.debug(
+                    "JWK Update: %s", pprint.pformat(jwk_result.asdict())
+                )
             args.callback(result)
             if result.exit_code == 0:
                 parser.exit(0)

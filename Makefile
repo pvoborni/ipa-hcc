@@ -235,6 +235,9 @@ install_mockapi:
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/httpd/conf.d
 	$(CP_CONFIG) $(srcdir)/install/mockapi/httpd/ipa-hcc-mockapi.conf $(DEST)$(SYSCONFDIR)/httpd/conf.d/
 
+	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates
+	$(CP_PD) $(srcdir)/install/mockapi/updates/87-hcc-mockapi.update $(DEST)$(DATADIR)/ipa/updates/
+
 .PHONY: install_server
 install_server: install_server_plugin install_registration_service
 

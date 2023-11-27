@@ -1,0 +1,8 @@
+#
+# IPA plugin for Hybrid Cloud Console (HCC)
+# Copyright (C) 2023  Christian Heimes <cheimes@redhat.com>
+# See COPYING for license
+#
+
+# Create and upload JWK for MockAPI
+plugin: update_hcc_mockapi

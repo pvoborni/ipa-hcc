@@ -34,6 +34,12 @@ class IPAServerTests(conftest.IPABaseTests):
             update_hcc_enrollment_service,
         )
 
+    def test_mockapi_imports(self):
+        # pylint: disable=unused-import,unused-variable,import-error
+        from ipaserver.install.plugins import (  # noqa: F401
+            update_hcc_mockapi,
+        )
+
 
 class IPAHCCServerTests(conftest.IPABaseTests):
     def test_ipa_hcc_cli_help(self):

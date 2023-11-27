@@ -325,9 +325,11 @@ class TestCLI(TestHCCAPICommon):
         self.assertEqual(out.strip(), "IPA is not configured on this system.")
 
     def test_cli_register(self):
-        self.m_submit_idmsvc_api.return_value = self.mkresponse(
-            200, DOMAIN_REGISTER_RESULT
-        )
+        # register calls "register_domain" followed by "update_jwk"
+        self.m_submit_idmsvc_api.side_effect = [
+            self.mkresponse(200, DOMAIN_REGISTER_RESULT),
+            self.mkresponse(200, SIGNING_KEYS_RESPONSE),
+        ]
         tok = self.gen_domain_reg_token()
         out = self.assert_cli_run(
             "register", "--unattended", tok["domain_token"]
@@ -335,9 +337,11 @@ class TestCLI(TestHCCAPICommon):
         self.assertIn("Successfully registered domain", out)
 
     def test_cli_update(self):
-        self.m_submit_idmsvc_api.return_value = self.mkresponse(
-            200, DOMAIN_UPDATE_RESULT
-        )
+        # update calls "update_domain" followed by "update_jwk"
+        self.m_submit_idmsvc_api.side_effect = [
+            self.mkresponse(200, DOMAIN_UPDATE_RESULT),
+            self.mkresponse(200, SIGNING_KEYS_RESPONSE),
+        ]
         out = self.assert_cli_run("update")
         self.assertIn("Successfully updated domain", out)
 

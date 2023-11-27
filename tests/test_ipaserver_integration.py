@@ -8,7 +8,6 @@ Run::
 """
 import datetime
 import os
-import pwd
 import unittest
 
 from ipalib import api, errors
@@ -29,9 +28,9 @@ class TestIPAServerIntegration(unittest.TestCase):  # pragma: no cover
         os.environ["KRB5CCNAME"] = "MEMORY:"
         if os.geteuid() == 0:
             # set euid so gssproxy authentication works
-            user = pwd.getpwnam(hccplatform.HCC_ENROLLMENT_AGENT_USER)
-            os.setegid(user.pw_gid)
-            os.seteuid(user.pw_uid)
+            user = hccplatform.HCC_ENROLLMENT_AGENT_USER
+            os.setegid(user.pgid)
+            os.seteuid(user.uid)
         # bootstrap and finalize API
         if not api.isdone("bootstrap"):
             api.bootstrap(

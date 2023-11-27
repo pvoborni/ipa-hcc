@@ -431,7 +431,7 @@ class HCCAPI:
 
     def _update_ipa_signing_keys(
         self, remote: typing.Dict[str, typing.List[str]], ipa_jwks: IPAKeyMap
-    ):
+    ) -> list:
         """Local-only: Update LDAP with information from remote dict
 
         - remote APIResult.json() from get_signing_keys()

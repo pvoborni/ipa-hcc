@@ -169,7 +169,14 @@ of IPA clients.
 
 
 %posttrans mockapi
-/bin/systemctl try-restart httpd.service
+%{python} -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    /usr/sbin/ipa-ldap-updater --quiet %{_datadir}/ipa/updates/87-hcc-mockapi.update
+
+    # restart httpd if running
+    /bin/systemctl try-restart httpd.service >/dev/null 2>&1 || :
+fi
 
 
 %package ephemeral
@@ -276,6 +283,8 @@ rm -rf %{buildroot}/%{python_sitelib}/ipahcc*.egg-info
 %__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_mockapi install_client_prepare
 %else
 rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
+rm %{buildroot}/%{python_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.py
+rm %{buildroot}/%{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
 %endif
 
 
@@ -329,6 +338,9 @@ rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
 %{python_sitelib}/ipahcc/mockapi/__pycache__/*.pyc
 %{_datadir}/ipa-hcc/hcc_mockapi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
+%{python_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.py
+%{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
+%{_datadir}/ipa/updates/87-hcc-mockapi.update
 
 %files ephemeral
 %doc README.md CONTRIBUTORS.txt
@@ -346,6 +358,7 @@ rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
 %attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/ipa-hcc-auto-enrollment
+
 
 %changelog
 {{{ git_dir_changelog }}}

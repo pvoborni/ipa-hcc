@@ -58,7 +58,7 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
     def setUp(self):
         p = mock.patch.object(wsgi.Application, "_load_jwk")
         self.m_load_jwk = p.start()
-        self.m_load_jwk.return_value = (PRIV_KEY, PUB_KEY.export_public())
+        self.m_load_jwk.return_value = PRIV_KEY
         self.addCleanup(p.stop)
 
         super().setUp()
