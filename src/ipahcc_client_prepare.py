@@ -36,7 +36,6 @@ RHSM_KEY = "/etc/pki/consumer/key.pem"
 SYSCONFIG = "/etc/sysconfig/ipa-hcc-auto-enrollment"
 
 logger = logging.getLogger(__name__)
-resolver = get_ipa_resolver()
 
 parser = argparse.ArgumentParser(
     prog="ipa-hcc-client-prepare",
@@ -91,6 +90,7 @@ class ClientPrepare:
     def dns_discover(self) -> str:
         """Auto-discover configuration endpoint with DNS"""
         logger.debug("Resolving DNS URI %s", HCCCONF_URI)
+        resolver = get_ipa_resolver()
         try:
             answer = resolver.resolve(HCCCONF_URI, rdtype=dns.rdatatype.URI)
         except dns.exception.DNSException:

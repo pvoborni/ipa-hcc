@@ -50,9 +50,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         p.start()
         self.addCleanup(p.stop)
 
-        p = mock.patch.object(client_prepare.resolver, "resolve")
-        self.m_resolve = p.start()
-        self.m_resolve.return_value = [
+        p = mock.patch.object(client_prepare, "get_ipa_resolver")
+        resolver = p.start()
+        resolver.return_value.resolve.return_value = [
             URI(1, 256, 0, 100, "https://server.test/service"),
         ]
         self.addCleanup(p.stop)
