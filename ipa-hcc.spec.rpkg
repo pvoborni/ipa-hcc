@@ -24,6 +24,7 @@
 %endif
 
 # --without mockapi (enabled by default)
+# includes mockapi server and client prepare for Ephemeral
 %bcond_without mockapi
 
 # local development
@@ -169,7 +170,35 @@ of IPA clients.
 %posttrans mockapi
 /bin/systemctl try-restart httpd.service
 
-# mockapi
+
+%package ephemeral
+Summary: Automatic IPA client enrollment: Ephemeral client prepare
+BuildArch: noarch
+
+Requires: %{package_name}-client = %{version}
+%{?systemd_requires}
+
+
+%description ephemeral
+This package contains a systemd service that hooks into the auto enrollment
+process of IPA clients. It prepares the client for testing with Ephemeral
+environment. The package also enables ipa-hcc-auto-enrollment.service.
+
+%post ephemeral
+%systemd_post ipa-hcc-client-prepare.service
+/bin/systemctl daemon-reload
+
+%posttrans ephemeral
+/bin/systemctl enable ipa-hcc-client-prepare.service
+/bin/systemctl enable ipa-hcc-auto-enrollment.service
+
+%preun ephemeral
+%systemd_preun ipa-hcc-client-prepare.service
+
+%postun ephemeral
+%systemd_postun_with_restart ipa-hcc-client-prepare.service
+
+# mockapi and ephemeral client-prepare
 %endif
 
 %package client
@@ -213,12 +242,17 @@ export PYTHONPATH=%{buildroot}%{python_sitelib}
 %{python} -Wignore -m unittest discover  -s tests/
 # remove module after test run
 rm -f  %{buildroot}/%{python_sitelib}/ipahcc_auto_enrollment.py
+rm -f  %{buildroot}/%{python_sitelib}/ipahcc_client_prepare.py
 rm -rf %{buildroot}/%{python_sitelib}/__pycache__
 
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --help >/dev/null
 %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment --version
 %if %{with server}
 %{buildroot}%{_sbindir}/ipa-hcc --help >/dev/null
+%endif
+%if %{with mockapi}
+%{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-client-prepare --help >/dev/null
+%{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-client-prepare --version
 %endif
 
 %install
@@ -238,7 +272,7 @@ rm -rf %{buildroot}/%{python_sitelib}/ipahcc*.egg-info
 %endif
 
 %if %{with mockapi}
-%__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_mockapi
+%__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_mockapi install_client_prepare
 %else
 rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
 %endif
@@ -294,8 +328,16 @@ rm -rf %{buildroot}/%{python_sitelib}/ipahcc/mockapi
 %{python_sitelib}/ipahcc/mockapi/__pycache__/*.pyc
 %{_datadir}/ipa-hcc/hcc_mockapi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
-%endif
 
+%files ephemeral
+%doc README.md CONTRIBUTORS.txt
+%license COPYING
+%attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-client-prepare
+%attr(0644,root,root) %{_unitdir}/ipa-hcc-client-prepare.service
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/ipa-hcc-client-prepare
+
+# with mockapi
+%endif
 
 %files client
 %doc README.md CONTRIBUTORS.txt

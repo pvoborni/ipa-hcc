@@ -161,7 +161,9 @@ install_python:
 	$(PYTHON) setup.py install -O1 --root $(DEST) --prefix $(PREFIX)
 	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc/hccplatform.py
 	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc_client_prepare.py
 	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py
+	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(PYTHON_SITELIB)/ipahcc_client_prepare.py
 
 .PHONY: install_client
 install_client:
@@ -173,6 +175,17 @@ install_client:
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-auto-enrollment.service $(DEST)$(UNITDIR)/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/sysconfig
 	$(CP_CONFIG) $(srcdir)/install/client/sysconfig/ipa-hcc-auto-enrollment $(DEST)$(SYSCONFDIR)/sysconfig/
+
+.PHONY: install_client_prepare
+install_client_prepare:
+	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
+	$(CP_PD) $(DEST)$(PYTHON_SITELIB)/ipahcc_client_prepare.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
+	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
+
+	$(MKDIR_P) $(DEST)$(UNITDIR)
+	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-client-prepare.service $(DEST)$(UNITDIR)/
+	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/sysconfig
+	$(CP_CONFIG) $(srcdir)/install/client/sysconfig/ipa-hcc-client-prepare $(DEST)$(SYSCONFDIR)/sysconfig/
 
 .PHONY: install_server_plugin
 install_server_plugin:

@@ -196,6 +196,20 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
         expected["domain_id"] = conftest.DOMAIN_ID
         self.assertEqual(response, expected)
 
+    def test_internal_hccconf(self):
+        path = "/internal/hccconf"
+        status_code, status_msg, headers, response = self.call_wsgi(
+            path, DOMAIN_REQUEST, method="GET"
+        )
+        self.assert_response(200, status_code, status_msg, headers, response)
+        self.assertEqual(
+            response,
+            {
+                "domain": conftest.DOMAIN,
+                "idmsvc_api_url": "https://console.redhat.com/api/idmsvc/v1",
+            },
+        )
+
 
 class TestDomRegToken(unittest.TestCase):
     token = "F3n-iOZn1VI.wbzIH7v-kRrdvfIvia4nBKAvEpIKGdv6MSIFXeUtqVY"  # noqa: S105

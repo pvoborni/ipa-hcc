@@ -1,0 +1,22 @@
+[Unit]
+Description=IPA Hybrid Cloud Console client prepare service (for stage and ephemeral)
+Documentation=man:ipa-client-install(1)
+
+# run if IPA config does not exist and RHSM certs exist
+ConditionPathExists=!/etc/ipa/default.conf
+ConditionPathExists=/etc/pki/consumer/cert.pem
+ConditionPathExists=/etc/pki/consumer/key.pem
+
+# run before auto enrollment
+Before=ipa-hcc-auto-enrollment.service
+After=rhcd.service
+Requisite=rhcd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+EnvironmentFile=-/etc/sysconfig/ipa-hcc-client-prepare $CLIENT_PREPARE_ARGS
+ExecStart=/usr/libexec/ipa-hcc/ipa-hcc-client-prepare
+
+[Install]
+WantedBy=rhcd.service

@@ -364,3 +364,30 @@ class Application(JSONWSGIApp):
         body.setdefault("auto_enrollment_enabled", True)
         body["domain_id"] = domain_id
         return body
+
+    @route(
+        "GET",
+        "^/internal/hccconf$",
+    )
+    def handle_internal_hccconf(  # pylint: disable=unused-argument
+        self, env: dict, body: dict
+    ) -> dict:
+        """Internal hcc.conf provider for ephemeral and stage setup
+
+        Used by ipahcc-client-prepare to provision a stage or ephemeral
+        test system with /etc/ipa/hcc.conf and fix non-FQDN hostnames.
+        Clients discover this endpoint with a DNS URI lookup:
+
+        ipa dnszone-add podengo-project.internal.
+        ipa dnsrecord-add podengo-project.internal. _hccconf \
+            --uri-priority=0 --uri-weight=100 \
+            --uri-target=https://$(hostname)/api/idmsvc/v1/internal/hccconf
+        """
+        result = {
+            "domain": self.api.env.domain,
+            "idmsvc_api_url": hccplatform.IDMSVC_API_URL,
+        }
+        if hccplatform.DEV_USERNAME:
+            result["dev_username"] = hccplatform.DEV_USERNAME
+            result["dev_password"] = hccplatform.DEV_PASSWORD
+        return result

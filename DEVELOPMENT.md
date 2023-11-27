@@ -284,7 +284,7 @@ te --phase teardown idm-ci/metadata/hmsidm-dev.yaml
 ```
 
 You can achieve even faster test cycles by `rsync`ing local checkout to
-the server and then running `./install.sh` on the server.
+the server and then running `./install_server.sh` on the server.
 
 
 ## Testing / verification
