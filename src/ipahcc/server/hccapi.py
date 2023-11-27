@@ -32,7 +32,7 @@ except ImportError:  # pragma: no cover
 from ipahcc import hccplatform, sign
 
 from . import schema
-from .util import create_certinfo
+from .util import create_certinfo, parse_rhsm_cert
 
 logger = logging.getLogger(__name__)
 
@@ -611,21 +611,49 @@ class HCCAPI:
             },
         }
 
-    def _get_dev_headers(self):
+    def _get_dev_headers(self) -> dict:
+        """Get dev headers for Ephemeral environment
+
+        NOTE: If you use Ephemeral with RHSM cert, then you have to update
+        the ``org_id`` attribute of the development user (``jdoe``) in
+        Keycloak, too. The default value for ``jdoe``'s org id is ``12345``.
+
+        ``openssl x509 -subject -noout -in /etc/pki/consumer/cert.pem``
+        """
+        if (
+            hccplatform.DEV_ORG_ID is not None
+            and hccplatform.DEV_CERT_CN is not None
+        ):
+            org_id = hccplatform.DEV_ORG_ID
+            cn = hccplatform.DEV_CERT_CN
+            source = hccplatform.HCC_CONFIG
+
+        else:
+            # dev_cert_cn is not set, use values from RHSM cert
+            source = hccplatform.RHSM_CERT
+            with open(hccplatform.RHSM_CERT, "rb") as f:
+                org_id, cn = parse_rhsm_cert(f.read())
+
+        logger.warning(
+            "Using dev X-Rh-Fake-Identity O=%s,CN=%s from '%s'.",
+            org_id,
+            cn,
+            source,
+        )
         fake_identity = {
             "identity": {
                 "account_number": "11111",
-                "org_id": hccplatform.DEV_ORG_ID,
+                "org_id": org_id,
                 "type": "System",
                 "auth_type": "cert-auth",
                 "system": {
                     "cert_type": "system",
-                    "cn": hccplatform.DEV_CERT_CN,
+                    "cn": cn,
                 },
                 "internal": {
                     "auth_time": 900,
                     "cross_access": False,
-                    "org_id": hccplatform.DEV_ORG_ID,
+                    "org_id": org_id,
                 },
             }
         }
@@ -650,14 +678,6 @@ class HCCAPI:
         if extra_headers:
             headers.update(extra_headers)
 
-        if hccplatform.DEV_CERT_CN is not None:
-            logger.warning(
-                "Using dev X-Rh-Fake-Identity O=%s,CN=%s",
-                hccplatform.DEV_ORG_ID,
-                hccplatform.DEV_CERT_CN,
-            )
-            headers.update(self._get_dev_headers())
-
         if hccplatform.DEV_USERNAME and hccplatform.DEV_PASSWORD:
             logger.warning(
                 "Using dev basic auth with account '%s'",
@@ -668,6 +688,7 @@ class HCCAPI:
                 hccplatform.DEV_PASSWORD,
             )
             cert = None
+            headers.update(self._get_dev_headers())
         else:
             auth = None
             cert = (hccplatform.RHSM_CERT, hccplatform.RHSM_KEY)
