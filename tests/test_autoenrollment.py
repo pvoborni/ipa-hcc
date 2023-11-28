@@ -268,7 +268,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         req = self.m_urlopen.call_args[0][0]
         self.assertEqual(
             req.get_full_url(),
-            "https://cert-api.access.redhat.com/r/insights"
+            "https://cert-api.access.redhat.com/r/insights/platform"
             "/inventory/v1/hosts?insights_id=96aac268-e7b8-429a-8c86-f498b96fe1f9",
         )
         self.assertEqual(req.get_method(), "GET")

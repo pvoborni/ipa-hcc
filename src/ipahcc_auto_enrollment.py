@@ -48,7 +48,7 @@ RHSM_CONF = "/etc/rhsm/rhsm.conf"
 INSIGHTS_MACHINE_ID = "/etc/insights-client/machine-id"
 INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
 # Prod cert-api uses internal CA while stage uses a public CA
-PROD_CERT_API = "https://cert-api.access.redhat.com/r/insights"
+PROD_CERT_API = "https://cert-api.access.redhat.com/r/insights/platform"
 PROD_CERT_API_CA = "/etc/rhsm/ca/redhat-uep.pem"
 STAGE_CERT_API = "https://cert.cloud.stage.redhat.com/api"
 STAGE_CERT_API_CA = None
@@ -546,6 +546,7 @@ class AutoEnrollment:
                 logger.exception(
                     "Failed to request host details from %s: %s", url, e
                 )
+                break
             else:
                 if j["total"] == 1 and j["results"][0]["insights_id"] == mid:
                     return j
