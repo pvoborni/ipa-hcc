@@ -47,6 +47,11 @@ RHSM_KEY = "/etc/pki/consumer/key.pem"
 RHSM_CONF = "/etc/rhsm/rhsm.conf"
 INSIGHTS_MACHINE_ID = "/etc/insights-client/machine-id"
 INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
+# Prod cert-api uses internal CA while stage uses a public CA
+PROD_CERT_API = "https://cert-api.access.redhat.com/r/insights"
+PROD_CERT_API_CA = "/etc/rhsm/ca/redhat-uep.pem"
+STAGE_CERT_API = "https://cert.cloud.stage.redhat.com/api"
+STAGE_CERT_API_CA = None
 IPA_DEFAULT_CONF = paths.IPA_DEFAULT_CONF
 HCC_DOMAIN_TYPE = "rhel-idm"
 HTTP_HEADERS = {
@@ -522,12 +527,12 @@ class AutoEnrollment:
         mid = self.insights_machine_id
         if typing.TYPE_CHECKING:
             assert isinstance(mid, str)
-        url = self._get_inventory_url(mid)
+        url, cafile = self._get_inventory_url(mid)
         time.sleep(3)  # short initial sleep
         sleep_dur = 10  # sleep for 10, 20, 40, ...
         for _i in range(5):
             try:
-                j = self._do_json_request(url)
+                j = self._do_json_request(url, cafile=cafile)
             except (HTTPError, ValueError) as e:
                 logger.exception(
                     "Failed to request host details from %s: %s", url, e
@@ -543,8 +548,10 @@ class AutoEnrollment:
         # TODO: error message
         raise RuntimeError("Unable to find machine in host inventory")
 
-    def _get_inventory_url(self, insights_id: str) -> str:
-        """Get Insights API url (prod or stage)
+    def _get_inventory_url(
+        self, insights_id: str
+    ) -> typing.Tuple[str, typing.Optional[str]]:
+        """Get Insights API url and CA (prod or stage)
 
         Base on https://github.com/RedHatInsights/insights-core
         /blob/insights-core-3.1.16/insights/client/auto_config.py
@@ -555,10 +562,12 @@ class AutoEnrollment:
         except OSError:
             conf = ""
         if "subscription.rhsm.stage.redhat.com" in conf:
-            base = "https://cert.cloud.stage.redhat.com/api"
+            base = STAGE_CERT_API
+            cafile = STAGE_CERT_API_CA
         else:
-            base = "https://cert-api.access.redhat.com/r/insights"
-        return f"{base}/inventory/v1/hosts?insights_id={insights_id}"
+            base = PROD_CERT_API
+            cafile = PROD_CERT_API_CA
+        return f"{base}/inventory/v1/hosts?insights_id={insights_id}", cafile
 
     def _lookup_dns_srv(self) -> typing.List[str]:
         """Lookup IPA servers via LDAP SRV records

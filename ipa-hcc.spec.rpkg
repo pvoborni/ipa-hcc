@@ -64,6 +64,7 @@ BuildRequires: make
 BuildRequires: openssl
 BuildRequires: systemd-devel
 BuildRequires: selinux-policy-devel
+BuildRequires: subscription-manager-rhsm-certificates
 %if %{with devel}
 BuildRequires: ipa-client
 BuildRequires: tox
