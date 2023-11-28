@@ -136,6 +136,8 @@ class ClientPrepare:
             )
         else:
             left = current.split(".", 1)[0]
+            # limit to 63 characters (Cyrus SASL bug)
+            left = left[: 63 - 1 - len(domain)].rstrip("-")
             new = f"{left}.{domain}"
             logger.info("Setting hostname from %s to %s", current, new)
             tasks.set_hostname(new)
@@ -173,7 +175,21 @@ class ClientPrepare:
         env = {"LC_ALL": "C.UTF-8"}
         for cmd in self.extra_commands:
             logger.info("Run: %s", cmd)
-            run(cmd, stdin=None, env=env, raiseonerr=True)
+            result = run(
+                cmd,
+                stdin=None,
+                env=env,
+                raiseonerr=False,
+                capture_output=True,
+                capture_error=True,
+            )
+            if result.returncode != 0:
+                logger.error(
+                    "Failed %s: '%s', '%s'",
+                    cmd,
+                    result.raw_output,
+                    result.raw_error_output,
+                )
 
 
 def main(args=None):

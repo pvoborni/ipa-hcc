@@ -28,7 +28,7 @@ import uuid
 from urllib.request import HTTPError, Request, urlopen
 
 from dns.exception import DNSException
-from ipalib import util, x509
+from ipalib import constants, util, x509
 from ipaplatform.osinfo import osinfo
 from ipaplatform.paths import paths
 from ipapython.dnsutil import query_srv
@@ -70,18 +70,27 @@ logger = logging.getLogger(__name__)
 
 
 def check_arg_hostname(arg: str) -> str:
-    if arg.lower() in {"localhost", "localhost.localdomain"}:
+    hostname = arg.lower()
+    if hostname in {"localhost", "localhost.localdomain"}:
         raise argparse.ArgumentError(
             None,
             f"Invalid hostname {arg}, host's FQDN is not configured.",
         )
+    # TODO: fixme and look into support for 253 characters.
+    # Linux Kernel limits the node name (hostname) to 64 characters.
+    # A bug in Cyrus SASL causes LDAP bind with SASL to fail when a hostname
+    # is exactly 64 characters. The off-by-one bug causes ipa-join to fail.
+    # SASL auth works with 63 characters. The bug is fixed by
+    # https://github.com/cyrusimap/cyrus-sasl/pull/599 but not available on
+    # older RHEL versions.
+    maxlen = constants.MAXHOSTNAMELEN - 1
     try:
-        util.validate_hostname(arg)
+        util.validate_hostname(hostname, maxlen=maxlen)
     except ValueError as e:
         raise argparse.ArgumentError(
             None, f"Invalid hostname {arg}: {e}"
         ) from None
-    return arg.lower()
+    return hostname
 
 
 def check_arg_domain_name(arg: str) -> str:
