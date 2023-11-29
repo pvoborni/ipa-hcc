@@ -57,10 +57,6 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         ]
         self.addCleanup(p.stop)
 
-        p = mock.patch.object(client_prepare, "run")
-        self.m_run = p.start()
-        self.addCleanup(p.stop)
-
         p = mock.patch.object(client_prepare, "urlopen")
         self.m_urlopen = p.start()
         # hcc_host_conf, hcc_register

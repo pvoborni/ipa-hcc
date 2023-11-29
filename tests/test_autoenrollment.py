@@ -7,6 +7,7 @@ from unittest import mock
 
 from dns.rdtypes.IN.SRV import SRV
 from ipaplatform.paths import paths
+from ipapython import ipautil
 
 import conftest
 import ipahcc_auto_enrollment as auto_enrollment
@@ -30,9 +31,9 @@ HOST_CONF_RESPONSE = {
             {"fqdn": conftest.SERVER_FQDN},
         ],
         "ipa_client_install_args": [
-            "--automount-location=default",
             "--enable-dns-updates",
         ],
+        "automount_location": "default",
     },
 }
 
@@ -87,7 +88,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         p.start()
         self.addCleanup(p.stop)
 
-        p = mock.patch.object(auto_enrollment, "run")
+        p = mock.patch.object(ipautil, "run")
         self.m_run = p.start()
         self.addCleanup(p.stop)
 
@@ -349,7 +350,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertTrue(os.path.isfile(ae.kdc_cacert))
 
         self.assertEqual(self.m_urlopen.call_count, 2)
-        self.assertEqual(self.m_run.call_count, 1)
+        # ipa-client-install, ipa-client-automount, selinuxenabled,
+        # getsebool, setsebool
+        self.assertEqual(self.m_run.call_count, 5)
 
         args, kwargs = self.m_run.call_args_list[0]
         self.assertEqual(
@@ -371,10 +374,27 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 "--pkinit-anchor",
                 f"FILE:{tmpdir}/ipa_ca.crt",
                 "--unattended",
-                "--automount-location=default",
                 "--enable-dns-updates",
             ],
         )
         self.assertEqual(
             kwargs, {"stdin": None, "env": None, "raiseonerr": True}
+        )
+
+        self.assertEqual(
+            self.m_run.call_args_list[1][0][0],
+            [
+                paths.IPA_CLIENT_AUTOMOUNT,
+                "--unattended",
+                "--location",
+                "default",
+            ],
+        )
+        self.assertEqual(
+            self.m_run.call_args_list[4][0][0],
+            [
+                "/usr/sbin/setsebool",
+                "-P",
+                "use_nfs_home_dirs=on",
+            ],
         )

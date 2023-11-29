@@ -25,7 +25,7 @@
           "format": "cert-issuer"
         },
         "nickname": {
-          "title": "Internal nick name in LDAP",
+          "title": "Internal nick name in LDAP (RDN cn)",
           "type": "string"
         },
         "not_after": {
@@ -53,7 +53,8 @@
           "type": "string",
           "format": "cert-subject"
         }
-      }
+      },
+      "x-rh-rdn-value": "nickname"
     },
     "Domain": {
       "title": "Base type for domain objects",
@@ -91,7 +92,8 @@
         "rhel-idm": {
           "$ref": "#/$defs/RhelIdmDomain"
         }
-      }
+      },
+      "x-rh-rdn-value": "domain_name"
     },
     "DomainId": {
       "title": "domain id",
@@ -193,11 +195,12 @@
         "subscription_manager_id": {
           "$ref": "#/$defs/SubscriptionManagerId"
         }
-      }
+      },
+      "x-rh-rdn-value": "fqdn"
     },
     "DomainName": {
       "title": "Fully qualified domain name",
-      "description": "A name of a domain (all lower-case)",
+      "description": "A name of a domain (all lower-case). The domain name can only be set during initial registration and not be modified by updates.\n",
       "type": "string",
       "format": "idn-hostname",
       "maxLength": 253,
@@ -270,6 +273,11 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "automount_location": {
+          "description": "Automount location name for ipa-client-automount",
+          "type": "string",
+          "minLength": 1
+        },
         "cabundle": {
           "$ref": "#/$defs/CaCertBundle"
         },
@@ -336,7 +344,8 @@
         "description": {
           "type": "string"
         }
-      }
+      },
+      "x-rh-rdn-value": "name"
     },
     "LocationName": {
       "title": "Location identifier (IPA location, AD site)",
@@ -348,7 +357,7 @@
     },
     "RealmName": {
       "title": "Kerberos realm name",
-      "description": "A Kerberos realm name (usually all upper-case domain name)",
+      "description": "A Kerberos realm name (usually all upper-case domain name). The realm can only be set during initial registration and not be modified by updates.\n",
       "type": "string",
       "format": "realm",
       "maxLength": 253,

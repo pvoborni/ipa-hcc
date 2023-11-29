@@ -31,8 +31,9 @@ from dns.exception import DNSException
 from ipalib import constants, util, x509
 from ipaplatform.osinfo import osinfo
 from ipaplatform.paths import paths
+from ipaplatform.tasks import tasks
+from ipapython import ipautil
 from ipapython.dnsutil import query_srv
-from ipapython.ipautil import run
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 FQDN = socket.gethostname()
@@ -272,6 +273,7 @@ class AutoEnrollment:
         self.inventory_id: typing.Optional[str] = None
         self.token: typing.Optional[str] = None
         self.install_args: typing.Iterable[str] = ()
+        self.automount_location: typing.Optional[str] = None
         # internals
         self.tmpdir: typing.Optional[str] = None
 
@@ -405,7 +407,7 @@ class AutoEnrollment:
                 env["KRB5_TRACE"] = "/dev/stderr"
         else:
             env = None
-        run(cmd, stdin=stdin, env=env, raiseonerr=True)
+        ipautil.run(cmd, stdin=stdin, env=env, raiseonerr=True)
 
     @property
     def ipa_cacert(self) -> str:
@@ -485,6 +487,8 @@ class AutoEnrollment:
         self.check_upto("register")
 
         self.ipa_client_install()
+        if self.automount_location is not None:
+            self.ipa_client_automount(self.automount_location)
 
     def check_upto(self, phase) -> None:
         if self.args.upto is not None and self.args.upto == phase:
@@ -675,9 +679,12 @@ class AutoEnrollment:
         # TODO: make token required
         self.token = j.get("token")
         self.realm = j[HCC_DOMAIN_TYPE]["realm_name"]
-        # install args are optional
+        # install args and automount location are optional
         self.install_args = j[HCC_DOMAIN_TYPE].get(
             "ipa_client_install_args", []
+        )
+        self.automount_location = j[HCC_DOMAIN_TYPE].get(
+            "automount_location", None
         )
         self.servers = self._sort_servers(
             j[HCC_DOMAIN_TYPE]["enrollment_servers"],
@@ -751,6 +758,19 @@ class AutoEnrollment:
         cmd.extend(self.install_args)
 
         return self._run(cmd)
+
+    def ipa_client_automount(self, location: str) -> None:
+        """Configure automount and SELinux boolean"""
+        logger.info("Configuring automount location '%s'", location)
+        cmd = [
+            paths.IPA_CLIENT_AUTOMOUNT,
+            "--unattended",
+            "--location",
+            location,
+        ]
+        self._run(cmd)
+        logger.info("Enabling SELinux boolean for home directory on NFS")
+        tasks.set_selinux_booleans({"use_nfs_home_dirs": "on"})
 
 
 def main(args=None):

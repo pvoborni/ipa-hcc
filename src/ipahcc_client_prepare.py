@@ -24,7 +24,6 @@ import dns.exception
 import dns.rdatatype
 from ipaplatform.tasks import tasks
 from ipapython.dnsutil import get_ipa_resolver
-from ipapython.ipautil import run
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 # version is updated by Makefile
@@ -66,11 +65,6 @@ parser.add_argument(
 
 
 class ClientPrepare:
-    extra_commands = [
-        # for automounting of home directories
-        ["/sbin/setsebool", "-P", "use_nfs_home_dirs", "on"],
-    ]
-
     def __init__(self, args: argparse.Namespace):
         self.args = args
 
@@ -85,7 +79,6 @@ class ClientPrepare:
 
         self.fix_hostname(domain)
         self.sysconfig_auto_enrollment(api_url, dev_username, dev_password)
-        self.run_extra_commands()
 
     def dns_discover(self) -> str:
         """Auto-discover configuration endpoint with DNS"""
@@ -170,26 +163,6 @@ class ClientPrepare:
         logger.info("Setting %s to %s", SYSCONFIG, content)
         with open(SYSCONFIG, "w", encoding="utf-8") as f:
             f.write(content)
-
-    def run_extra_commands(self):
-        env = {"LC_ALL": "C.UTF-8"}
-        for cmd in self.extra_commands:
-            logger.info("Run: %s", cmd)
-            result = run(
-                cmd,
-                stdin=None,
-                env=env,
-                raiseonerr=False,
-                capture_output=True,
-                capture_error=True,
-            )
-            if result.returncode != 0:
-                logger.error(
-                    "Failed %s: '%s', '%s'",
-                    cmd,
-                    result.raw_output,
-                    result.raw_error_output,
-                )
 
 
 def main(args=None):
