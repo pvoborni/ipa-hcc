@@ -56,9 +56,9 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
     wsgi_class = wsgi.Application
 
     def setUp(self):
-        p = mock.patch.object(wsgi.Application, "_load_jwk")
-        self.m_load_jwk = p.start()
-        self.m_load_jwk.return_value = PRIV_KEY
+        p = mock.patch.object(wsgi.Application, "_load_priv_jwk")
+        self.m_load_priv_jwk = p.start()
+        self.m_load_priv_jwk.return_value = PRIV_KEY
         self.addCleanup(p.stop)
 
         super().setUp()

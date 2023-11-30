@@ -159,16 +159,25 @@ class IPABaseTests(unittest.TestCase):
         )
 
     def mock_hccplatform(self):
+        cfg = mock.Mock(spec=hccplatform.CONFIG)
+        cfg.configure_mock(
+            idmsvc_api_url="http://invalid.test",
+            token_url="http://invalid.test",  # noqa: S106
+            inventory_api_url="http://invalid.test",
+            dev_org_id=None,
+            dev_cert_cn=None,
+            dev_username=None,
+            dev_password=None,
+        )
+
         p = mock.patch.multiple(
             "ipahcc.hccplatform",
             RHSM_CERT=RHSM_CERT,
             RHSM_KEY=RHSM_KEY,
             INSIGHTS_HOST_DETAILS=HOST_DETAILS,
             HCC_CACERTS_DIR=KDC_CA_DIR,
-            IDMSVC_API_URL="http://invalid.test",
-            TOKEN_URL="http://invalid.test",  # noqa: S106
-            INVENTORY_API_URL="http://invalid.test",
             HCC_ENROLLMENT_AGENT_KEYTAB=NO_FILE,
+            CONFIG=cfg,
         )
         p.start()
         self.addCleanup(p.stop)

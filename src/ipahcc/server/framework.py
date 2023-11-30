@@ -19,8 +19,8 @@ from urllib.parse import parse_qs
 import gssapi
 import ipalib
 
-from ipahcc import hccplatform
-from ipahcc.server.hccapi import APIResult
+from ipahcc import hccplatform, sign
+from ipahcc.server.hccapi import HCCAPI, APIResult
 from ipahcc.server.schema import ValidationError, validate_schema
 from ipahcc.server.util import parse_rhsm_cert
 
@@ -104,16 +104,15 @@ class JSONWSGIApp:
         if not self.api.isdone("bootstrap"):
             self.api.bootstrap(in_server=False)
 
-        patch_user_cache(
-            api=self.api,
-            cachepath=hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR,
-        )
+        if not self.api.env.in_server:
+            patch_user_cache(
+                api=self.api,
+                cachepath=hccplatform.HCC_ENROLLMENT_AGENT_CACHE_DIR,
+            )
 
+        self.hccapi = HCCAPI(self.api)
         self.routes = self._get_routes()
-
-        # cached org_id from IPA config_show
-        self._org_id: typing.Optional[str] = None
-        self._domain_id: typing.Optional[str] = None
+        self._cache: typing.Dict[str, typing.Any] = {}
 
     def _get_routes(self) -> typing.List[typing.Tuple["re.Pattern", dict]]:
         """Inspect class and get a list of routes"""
@@ -206,11 +205,30 @@ class JSONWSGIApp:
                 f"schema violation: invalid JSON for {schema_id}",
             ) from None
 
+    def _get_cache(self, key: str, default: typing.Any = None) -> typing.Any:
+        """Get a key from local cache"""
+        # Future versions may invalidate the cache after X minutes.
+        return self._cache.get(key, default)
+
+    def _set_cache(self, key: str, value: typing.Any) -> None:
+        """Set or update a cache entry"""
+        self._cache[key] = value
+
+    def _clear_cache(self) -> None:
+        self._cache.clear()
+
     def before_call(self) -> None:
         """Before handle method call hook"""
+        # check for modified hcc.conf in development mode
+        if hccplatform.DEVELOPMENT_MODE:
+            hccplatform.CONFIG.refresh_config()
 
     def after_call(self) -> None:
         """After handle method call hook"""
+        self._disconnect_ipa()
+        # invalidate cache and force refresh in development mode
+        if hccplatform.DEVELOPMENT_MODE:
+            self._clear_cache()
 
     def parse_cert(self, env: dict) -> typing.Tuple[str, str]:
         """Parse XRHID certificate"""
@@ -264,7 +282,7 @@ class JSONWSGIApp:
 
     def _get_ipa_config(self) -> typing.Tuple[str, str]:
         """Get org_id and domain_id from IPA config"""
-        # automatically connect i
+        # automatically connect
         connected = self._is_connected()
         if not connected:
             self._connect_ipa()
@@ -286,24 +304,39 @@ class JSONWSGIApp:
             if not connected:
                 self._disconnect_ipa()
 
-    def _reset_ipa_config(self) -> None:
-        """Clear cached org and domain id"""
-        self._org_id = None
-        self._domain_id = None
-
     @property
     def org_id(self) -> str:
         """Get organization id from LDAP (cached)"""
-        if self._org_id is None:
-            self._org_id, self._domain_id = self._get_ipa_config()
-        return self._org_id
+        org_id = self._get_cache("org_id")
+        if org_id is None:
+            org_id, domain_id = self._get_ipa_config()
+            self._set_cache("org_id", org_id)
+            self._set_cache("domain_id", domain_id)
+        if typing.TYPE_CHECKING:
+            assert isinstance(org_id, str)
+        return org_id
 
     @property
     def domain_id(self) -> str:
         """Get domain uuid from LDAP (cached)"""
-        if self._domain_id is None:
-            self._org_id, self._domain_id = self._get_ipa_config()
-        return self._domain_id
+        domain_id = self._get_cache("domain_id")
+        if domain_id is None:
+            org_id, domain_id = self._get_ipa_config()
+            self._set_cache("org_id", org_id)
+            self._set_cache("domain_id", domain_id)
+        if typing.TYPE_CHECKING:
+            assert isinstance(domain_id, str)
+        return domain_id
+
+    def _get_ipa_jwkset(self) -> sign.JWKSet:
+        """Get JWKs from LDAP"""
+        jwkset = self._get_cache("jwkset")
+        if jwkset is None:
+            jwkset = self.hccapi.get_ipa_jwkset()
+            self._set_cache("jwkset", jwkset)
+        if typing.TYPE_CHECKING:
+            assert isinstance(jwkset, sign.JWKSet)
+        return jwkset
 
     def __call__(
         self, env: dict, start_response: typing.Callable

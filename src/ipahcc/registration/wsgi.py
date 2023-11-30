@@ -9,7 +9,6 @@ import logging
 from ipalib import errors
 
 from ipahcc import hccplatform, sign
-from ipahcc.server import hccapi
 from ipahcc.server.framework import (
     HTTPException,
     JSONWSGIApp,
@@ -25,31 +24,21 @@ logger.setLevel(logging.DEBUG)
 class Application(JSONWSGIApp):
     def __init__(self, api=None) -> None:
         super().__init__(api=api)
-        self.hccapi = hccapi.HCCAPI(self.api)
         # cached PEM bundle
         self._kdc_cabundle = read_cert_dir(hccplatform.HCC_CACERTS_DIR)
 
     def before_call(self) -> None:
+        super().before_call()
         self._connect_ipa()
-
-    def after_call(self) -> None:
-        self._disconnect_ipa()
-
-    def _load_pub_jwk(self) -> sign.JWKSet:
-        """Get JWKs from LDAP
-
-        TODO: Caching
-        """
-        return self.hccapi.get_ipa_jwkset()
 
     def validate_token(
         self, raw_token: str, inventory_id: str, rhsm_id: str, fqdn: str
     ):
-        pub_jwkset = self._load_pub_jwk()
+        jwkset = self._get_ipa_jwkset()
         try:
             header, claims = sign.validate_host_token(
                 raw_token,
-                pub_jwkset,
+                jwkset,
                 cert_o=str(self.org_id),
                 cert_cn=rhsm_id,
                 inventory_id=inventory_id,

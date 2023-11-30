@@ -9,6 +9,7 @@ __all__ = ("is_ipa_configured",)
 
 import configparser
 import json
+import logging
 import os
 from typing import Optional
 
@@ -16,6 +17,8 @@ from ipalib.facts import is_ipa_configured
 from ipaplatform.constants import User, constants
 from ipaplatform.osinfo import osinfo
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
+
+logger = logging.getLogger(__name__)
 
 # version is updated by Makefile
 VERSION = "0.12"
@@ -86,7 +89,23 @@ class _HCCConfig:
             interpolation=configparser.ExtendedInterpolation(),
         )
         self._cp.add_section(self._section)
-        self._cp.read(HCC_CONFIG)
+        self._mtime: int = 0
+        self.refresh_config()
+
+    def refresh_config(self) -> Optional[bool]:
+        """Read or refresh config from config file"""
+        try:
+            mtime = int(os.stat(HCC_CONFIG).st_mode)
+            if mtime > self._mtime:
+                logger.info("Reading config file %s", HCC_CONFIG)
+                with open(HCC_CONFIG, encoding="utf-8") as f:
+                    self._cp.read_file(f)
+                self._mtime = mtime
+                return True
+            else:
+                return False
+        except FileNotFoundError:
+            return None
 
     @property
     def idmsvc_api_url(self) -> str:
@@ -124,12 +143,4 @@ class _HCCConfig:
         return self._cp.get(self._section, "dev_password", fallback=None)
 
 
-_hccconfig = _HCCConfig()
-
-IDMSVC_API_URL = _hccconfig.idmsvc_api_url
-TOKEN_URL = _hccconfig.token_url
-INVENTORY_API_URL = _hccconfig.inventory_api_url
-DEV_ORG_ID = _hccconfig.dev_org_id
-DEV_CERT_CN = _hccconfig.dev_cert_cn
-DEV_USERNAME = _hccconfig.dev_username
-DEV_PASSWORD = _hccconfig.dev_password
+CONFIG = _HCCConfig()

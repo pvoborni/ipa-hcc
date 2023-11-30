@@ -621,11 +621,11 @@ class HCCAPI:
         ``openssl x509 -subject -noout -in /etc/pki/consumer/cert.pem``
         """
         if (
-            hccplatform.DEV_ORG_ID is not None
-            and hccplatform.DEV_CERT_CN is not None
+            hccplatform.CONFIG.dev_org_id is not None
+            and hccplatform.CONFIG.dev_cert_cn is not None
         ):
-            org_id = hccplatform.DEV_ORG_ID
-            cn = hccplatform.DEV_CERT_CN
+            org_id = hccplatform.CONFIG.dev_org_id
+            cn = hccplatform.CONFIG.dev_cert_cn
             source = hccplatform.HCC_CONFIG
 
         else:
@@ -671,21 +671,24 @@ class HCCAPI:
         payload: typing.Optional[typing.Dict[str, typing.Any]] = None,
         extra_headers=None,
     ) -> requests.Response:
-        api_url = hccplatform.IDMSVC_API_URL.rstrip("/")
+        api_url = hccplatform.CONFIG.idmsvc_api_url.rstrip("/")
         url = "/".join((api_url,) + subpath)
         headers = {}
         headers.update(hccplatform.HTTP_HEADERS)
         if extra_headers:
             headers.update(extra_headers)
 
-        if hccplatform.DEV_USERNAME and hccplatform.DEV_PASSWORD:
+        if (
+            hccplatform.CONFIG.dev_username
+            and hccplatform.CONFIG.dev_password
+        ):
             logger.warning(
                 "Using dev basic auth with account '%s'",
-                hccplatform.DEV_USERNAME,
+                hccplatform.CONFIG.dev_username,
             )
             auth = requests.auth.HTTPBasicAuth(
-                hccplatform.DEV_USERNAME,
-                hccplatform.DEV_PASSWORD,
+                hccplatform.CONFIG.dev_username,
+                hccplatform.CONFIG.dev_password,
             )
             cert = None
             headers.update(self._get_dev_headers())

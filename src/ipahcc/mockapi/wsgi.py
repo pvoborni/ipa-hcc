@@ -19,7 +19,6 @@ from ipalib import errors
 from ipaplatform.paths import paths
 
 from ipahcc import hccplatform, sign
-from ipahcc.server import hccapi
 from ipahcc.server.framework import UUID_RE, HTTPException, JSONWSGIApp, route
 
 from . import domain_token
@@ -38,18 +37,12 @@ class Application(JSONWSGIApp):
         # requests session for persistent HTTP connection
         self.session = requests.Session()
         self.session.headers.update(hccplatform.HTTP_HEADERS)
-        self.hccapi = hccapi.HCCAPI(self.api)
 
-    def before_call(self) -> None:
-        # self._connect_ipa() is called on demand
-        pass
+    # _connect_ipa is called on demand
+    # def before_call(self) -> None:
+    #     self._connect_ipa()
 
-    def after_call(self) -> None:
-        self._disconnect_ipa()
-        # force refresh
-        self._reset_ipa_config()
-
-    def _load_jwk(self) -> typing.Optional[sign.JWKDict]:
+    def _load_priv_jwk(self) -> typing.Optional[sign.JWKDict]:
         logger.info(
             "Loading mockapi JWK from %s", hccplatform.MOCKAPI_PRIV_JWK
         )
@@ -89,7 +82,7 @@ class Application(JSONWSGIApp):
             "client_id": hccplatform.TOKEN_CLIENT_ID,
             "refresh_token": refresh_token,
         }
-        url = hccplatform.TOKEN_URL
+        url = hccplatform.CONFIG.token_url
         start = monotonic_time()
         resp = self.session.post(url, data)
         dur = monotonic_time() - start
@@ -119,7 +112,7 @@ class Application(JSONWSGIApp):
         """
         # cannot lookup from .../hosts/{inventory_id}, RHEL 7 does not include
         # subscription_manager_id in return value.
-        url = "/".join((hccplatform.INVENTORY_API_URL.rstrip("/"), "hosts"))
+        url = "/".join((hccplatform.CONFIG.inventory_api_url.rstrip("/"), "hosts"))
         logger.debug(
             "Looking up inventory id %s / rhsm %s in console inventory %s",
             inventory_id,
@@ -202,7 +195,7 @@ class Application(JSONWSGIApp):
     ) -> dict:
         if not self._is_connected():
             self._connect_ipa()
-        jwkset = self.hccapi.get_ipa_jwkset()
+        jwkset = self._get_ipa_jwkset()
         keys = [jwk.export_public() for jwk in jwkset]
         return {"keys": keys, "revoked_kids": ["bad key id"]}
 
@@ -226,7 +219,7 @@ class Application(JSONWSGIApp):
             raise HTTPException(
                 400, f"Invalid org_id: {org_id} != {self.org_id}"
             )
-        priv_key = self._load_jwk()
+        priv_key = self._load_priv_jwk()
         if priv_key is None:
             raise HTTPException(
                 500, "unable to load MockAPI private JWK from disk"
@@ -379,9 +372,9 @@ class Application(JSONWSGIApp):
         """
         result = {
             "domain": self.api.env.domain,
-            "idmsvc_api_url": hccplatform.IDMSVC_API_URL,
+            "idmsvc_api_url": hccplatform.CONFIG.idmsvc_api_url,
         }
-        if hccplatform.DEV_USERNAME:
-            result["dev_username"] = hccplatform.DEV_USERNAME
-            result["dev_password"] = hccplatform.DEV_PASSWORD
+        if hccplatform.CONFIG.dev_username:
+            result["dev_username"] = hccplatform.CONFIG.dev_username
+            result["dev_password"] = hccplatform.CONFIG.dev_password
         return result

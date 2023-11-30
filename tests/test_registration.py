@@ -15,9 +15,9 @@ class TestRegistrationWSGI(conftest.IPAWSGIBaseTests):
     def setUp(self):
         super().setUp()
 
-        p = mock.patch.object(self.app, "_load_pub_jwk")
-        self.m_load_jwk = p.start()
-        self.m_load_jwk.return_value = PUB_KEY
+        p = mock.patch.object(self.app, "_get_ipa_jwkset")
+        self.m_get_jwkset = p.start()
+        self.m_get_jwkset.return_value = PUB_KEY
         self.addCleanup(p.stop)
 
     def test_ipaapi(self):
