@@ -376,12 +376,37 @@ class AutoEnrollment:
         if DEVELOPMENT_MODE and self.args.dev_username:
             self._ephemeral_config(req)
 
-        with urlopen(  # noqa: S310
-            req,
-            timeout=self.args.timeout,
-            context=context,
-        ) as resp:  # nosec
-            j = json.load(resp)
+        try:
+            with urlopen(  # noqa: S310
+                req,
+                timeout=self.args.timeout,
+                context=context,
+            ) as resp:  # nosec
+                j = json.load(resp)
+        except HTTPError as e:
+            logger.error(
+                "HTTPError %s: %s (%s %s)",
+                e.code,
+                e.reason,
+                req.get_method(),
+                req.get_full_url(),
+            )
+            logger.debug("Headers: %s", dict(e.headers))
+            if e.headers.get("content-type") == "application/json":
+                j = json.load(e.fp)
+                for error in j.get("errors", ()):
+                    logger.error(
+                        "Error status=%s, title=%r, detail=%r, code=%r",
+                        error.get("status"),
+                        error.get("title"),
+                        error.get("detail"),
+                        error.get("code"),
+                    )
+            else:
+                # not a JSON error response, may be HTML
+                logger.debug("Error response: %s", e.read(4096))
+            raise e from None
+
         logger.debug("Server response: %s", j)
         return j
 
@@ -546,9 +571,9 @@ class AutoEnrollment:
         for _i in range(5):
             try:
                 j = self._do_json_request(url, cafile=cafile)
-            except (HTTPError, ValueError) as e:
+            except Exception:  # pylint: disable=broad-exception-caught
                 logger.exception(
-                    "Failed to request host details from %s: %s", url, e
+                    "Failed to request host details from %s", url
                 )
                 break
             else:
@@ -663,10 +688,8 @@ class AutoEnrollment:
         )
         try:
             j = self._do_json_request(url, body=body, verify=verify)
-        except HTTPError as e:
-            logger.error(
-                "Request to %s failed: %s: %s", url, type(e).__name__, e
-            )
+        except Exception:
+            logger.error("Failed to get host configuration from %s", url)
             raise SystemExit(2) from None
 
         with open(self.ipa_cacert, "w", encoding="utf-8") as f:
@@ -726,9 +749,13 @@ class AutoEnrollment:
         if self.token is not None:
             body["token"] = self.token
         logger.info("Registering host at %s", url)
-        j = self._do_json_request(
-            url, body=body, verify=True, cafile=self.ipa_cacert
-        )
+        try:
+            j = self._do_json_request(
+                url, body=body, verify=True, cafile=self.ipa_cacert
+            )
+        except Exception:
+            logger.exception("Failed to register host at %s", url)
+            raise SystemExit(3) from None
         if j["status"] != "ok":
             raise SystemExit(3)
         with open(self.kdc_cacert, "w", encoding="utf-8") as f:

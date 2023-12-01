@@ -306,6 +306,13 @@ def capture_output():
         out.seek(0)
 
 
+def jsonio(body: dict) -> io.BytesIO:
+    j = json.dumps(body).encode("utf-8")
+    out = io.BytesIO(j)
+    out.seek(0)
+    return out
+
+
 def _fixup_ipaserver_import(name):
     path = os.path.join(BASEDIR, "src", name.replace(".", os.sep))
     mod = importlib.import_module(name)

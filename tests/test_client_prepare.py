@@ -1,5 +1,3 @@
-import io
-import json
 import os
 import shutil
 import tempfile
@@ -19,13 +17,6 @@ CONFIG = {
     "dev_username": "user",
     "dev_password": "test",
 }
-
-
-def jsonio(body):
-    j = json.dumps(body).encode("utf-8")
-    out = io.BytesIO(j)
-    out.seek(0)
-    return out
 
 
 class TestAutoEnrollmentNoMock(unittest.TestCase):
@@ -61,7 +52,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.m_urlopen = p.start()
         # hcc_host_conf, hcc_register
         self.m_urlopen.side_effect = [
-            jsonio(CONFIG),
+            conftest.jsonio(CONFIG),
         ]
         self.addCleanup(p.stop)
 

@@ -1,9 +1,10 @@
-import io
 import json
 import os
 import ssl
 import unittest
+from email.message import Message
 from unittest import mock
+from urllib.error import HTTPError
 
 from dns.rdtypes.IN.SRV import SRV
 from ipaplatform.paths import paths
@@ -49,13 +50,6 @@ REGISTER_RESPONSE = {"status": "ok", "kdc_cabundle": conftest.KDC_CA_DATA}
 IDMSVC_API_URL = f"https://{conftest.SERVER_FQDN}/api/idmsvc/v1"
 
 
-def jsonio(body):
-    j = json.dumps(body).encode("utf-8")
-    out = io.BytesIO(j)
-    out.seek(0)
-    return out
-
-
 class TestAutoEnrollmentNoMock(unittest.TestCase):
     def test_module_attributes(self):
         self.assertEqual(hccplatform.RHSM_CERT, auto_enrollment.RHSM_CERT)
@@ -96,8 +90,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.m_urlopen = p.start()
         # hcc_host_conf, hcc_register
         self.m_urlopen.side_effect = [
-            jsonio(HOST_CONF_RESPONSE),
-            jsonio(REGISTER_RESPONSE),
+            conftest.jsonio(HOST_CONF_RESPONSE),
+            conftest.jsonio(REGISTER_RESPONSE),
         ]
         self.addCleanup(p.stop)
 
@@ -258,7 +252,10 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         # first call to urlopen gets host details from API
         with open(conftest.HOST_DETAILS, encoding="utf-8") as f:
             host_details = json.load(f)
-        self.m_urlopen.side_effect = [jsonio(host_details), Exception]
+        self.m_urlopen.side_effect = [
+            conftest.jsonio(host_details),
+            Exception,
+        ]
         ae = auto_enrollment.AutoEnrollment(args)
         with ae:
             self.assertEqual(ae.inventory_id, None)
@@ -397,4 +394,45 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 "-P",
                 "use_nfs_home_dirs=on",
             ],
+        )
+
+    def test_json_error(self):
+        msg = Message()
+        msg.add_header("content-type", "application/json")
+        self.m_urlopen.side_effect = HTTPError(
+            url=IDMSVC_API_URL,
+            code=403,
+            msg="Forbidden",
+            hdrs=msg,
+            fp=conftest.jsonio(
+                {
+                    "errors": [
+                        {
+                            "id": "id",
+                            "status": "403",
+                            "title": "Forbidden",
+                            "detail": "Internal Error",
+                            "code": "internal code",
+                        }
+                    ]
+                }
+            ),
+        )
+        args = self.parse_args()
+        ae = auto_enrollment.AutoEnrollment(args)
+        with ae:
+            with self.assertRaises(SystemExit):
+                ae.hcc_host_conf()
+
+        # check for expected HTTP error and JSON error outputs
+        logs = self.get_logs()
+        self.assertIn(
+            "HTTPError 403: Forbidden "
+            f"(POST {IDMSVC_API_URL}/host-conf/None/{args.hostname})",
+            logs,
+        )
+        self.assertIn(
+            "Error status=403, title='Forbidden', detail='Internal Error', "
+            "code='internal code'",
+            logs,
         )
