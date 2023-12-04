@@ -37,6 +37,7 @@ class TestIPAServerIntegration(unittest.TestCase):  # pragma: no cover
                 force_schema_check=True,
                 in_server=False,
                 log=None,
+                context="hcc",
             )
         if not api.isdone("finalize"):
             api.finalize()

@@ -102,7 +102,10 @@ class JSONWSGIApp:
         else:
             self.api = api
         if not self.api.isdone("bootstrap"):
-            self.api.bootstrap(in_server=False)
+            self.api.bootstrap(
+                in_server=False,
+                context="hcc",
+            )
 
         if not self.api.env.in_server:
             patch_user_cache(

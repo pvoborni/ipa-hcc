@@ -153,6 +153,16 @@ if hccplatform.DEVELOPMENT_MODE:
 def main(args=None):
     args = parser.parse_args(args)
 
+    ipalib.api.bootstrap(
+        in_server=True,
+        confdir=paths.ETC_IPA,
+        context="hcc",
+    )
+    ipalib.api.finalize()
+
+    # hcc.conf or default.conf debug flag
+    if ipalib.api.env.debug:
+        args.verbose = 2
     # -v and -vv option
     if args.verbose == 0:
         level = logging.WARNING
@@ -171,9 +181,6 @@ def main(args=None):
     if os.geteuid() != 0:
         print("Must be run as root", file=sys.stderr)
         parser.exit(3)
-
-    ipalib.api.bootstrap(in_server=True, confdir=paths.ETC_IPA)
-    ipalib.api.finalize()
 
     jwk_result: typing.Optional[hccapi.APIResult] = None
 

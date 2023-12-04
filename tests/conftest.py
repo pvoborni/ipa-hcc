@@ -97,6 +97,7 @@ if not api.isdone("bootstrap"):
             force_schema_check=True,
             log=None,
             in_server=False,
+            context="hcc",
         )
     else:
         # not an IPA system, use fake values
@@ -106,6 +107,7 @@ if not api.isdone("bootstrap"):
             server=SERVER_FQDN,
             domain=DOMAIN,
             realm=REALM,
+            context="hcc",
         )
 else:  # pragma: no cover
     pass
