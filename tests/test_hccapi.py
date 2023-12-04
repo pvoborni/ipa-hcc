@@ -55,6 +55,7 @@ DOMAIN_REGISTER_RESULT[hccplatform.HCC_DOMAIN_TYPE].update(
 )
 
 DOMAIN_UPDATE_RESULT = DOMAIN_REGISTER_RESULT
+DOMAIN_GET_RESULT = DOMAIN_REGISTER_RESULT
 
 STATUS_CHECK_RESULT = copy.deepcopy(COMMON_RESULT)
 STATUS_CHECK_RESULT.update(
@@ -226,8 +227,10 @@ class TestHCCAPI(TestHCCAPICommon):
         self.assertIsInstance(resp, hccapi.APIResult)
 
     def test_status_check(self):
+        self.m_session.request.return_value = self.mkresponse(
+            200, DOMAIN_GET_RESULT
+        )
         info, resp = self.m_hccapi.status_check()
-        self.m_session.request.assert_not_called()
         self.assertIsInstance(info, dict)
         self.assertIsInstance(resp, hccapi.APIResult)
 
@@ -346,9 +349,10 @@ class TestCLI(TestHCCAPICommon):
         self.assertIn("Successfully updated domain", out)
 
     def test_cli_status(self):
-        self.m_submit_idmsvc_api.return_value = self.mkresponse(
-            200, STATUS_CHECK_RESULT
-        )
+        self.m_submit_idmsvc_api.side_effect = [
+            self.mkresponse(200, DOMAIN_GET_RESULT),
+            self.mkresponse(200, STATUS_CHECK_RESULT),
+        ]
         out = self.assert_cli_run("status")
 
         self.assertEqual(
@@ -358,6 +362,7 @@ class TestCLI(TestHCCAPICommon):
             domain name: {conftest.DOMAIN}
             domain id: {conftest.DOMAIN_ID}
             org id: {conftest.ORG_ID}
+            auto enrollment: True
             servers:
             \t{conftest.SERVER_FQDN} (HCC plugin: yes)
             """

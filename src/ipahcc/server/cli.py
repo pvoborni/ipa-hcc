@@ -126,6 +126,11 @@ def status_callback(result: hccapi.APIResult) -> None:
     print("domain name: {}".format(j["domain_name"]))
     print("domain id: {}".format(j.get("domain_id") or nr))
     print("org id: {}".format(j.get("org_id") or nr))
+    print(
+        "auto enrollment: {}".format(
+            j.get("auto_enrollment_enabled") or "n/a"
+        )
+    )
     print("servers:")
     for server in j[hccplatform.HCC_DOMAIN_TYPE]["servers"]:
         fqdn = server["fqdn"]
@@ -222,7 +227,10 @@ def main(args=None):
             if result.exit_code == 0:
                 parser.exit(0)
             else:
-                parser.exit(result.exit_code, result.exit_message + "\n")
+                parser.exit(
+                    result.exit_code,
+                    f"Error:\n    {result.exit_message}\n",
+                )
 
 
 if __name__ == "__main__":

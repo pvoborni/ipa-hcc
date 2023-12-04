@@ -32,10 +32,11 @@
     - name: Run ipa-hcc status
       command: ipa-hcc status
       register: ipahccstatus
+      failed_when: false
 
     - name: Show ipa-hcc status result
       debug:
-        msg: "{{ ipahccstatus.stdout }}"
+        msg: "{{ ipahccstatus.stderr }}\n{{ ipahccstatus.stdout }}"
 
     - name: kinit as IPA admin
       shell: |

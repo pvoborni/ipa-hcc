@@ -334,26 +334,67 @@ class HCCAPI:
         return info, result
 
     def status_check(self) -> typing.Tuple[dict, APIResult]:
-        """Local-only request: get domain information from IPA
+        """Local and remote request: get status from IPA and HCC
 
-        Fetch local IPA domain information from LDAP / IPA API.
+        Fetch local IPA domain information from LDAP / IPA API. If
+        'domain_id' is configured, then contact HCC and verify the
+        domain is still registered, too.
         """
+        domain_id: typing.Optional[str] = None
+        org_id: typing.Optional[str] = None
+        exit_code: int = 0
+
         config = self._get_ipa_config(all_fields=True)
         info = self._get_ipa_info(config)
         # remove CA certs, add domain and org id
         info[hccplatform.HCC_DOMAIN_TYPE].pop("ca_certs", None)
-        domain_id = _get_one(config, "hccdomainid", None)
+        domain_id = _get_one(config, "hccdomainid", default=None)
         org_id = _get_one(config, "hccorgid", default=None)
-        info.update(domain_id=domain_id, org_id=org_id)
+        info.update(
+            domain_id=domain_id,
+            org_id=org_id,
+            auto_enrollment_enabled=None,
+        )
         if domain_id:
-            msg = (
-                f"IPA domain '{info['domain_name']}' is registered with Hybrid "
-                f"Cloud Console (domain_id: {domain_id}, organization: {org_id})."
-            )
+            name = info["domain_name"]
+            try:
+                remote = self._get_remote_domain_info(domain_id)
+            except APIError as e:
+                exit_code = 2
+                status_code = e.result.status_code
+                msg = (
+                    "Hybrid Cloud Console lookup failed. "
+                    f"({e.result.exit_message[:1024]})"
+                )
+            else:
+                status_code = 200
+                ae_enabled = bool(
+                    remote.get("auto_enrollment_enabled", False)
+                )
+                info.update(auto_enrollment_enabled=ae_enabled)
+                msg = (
+                    f"IPA domain '{name}' is registered with Hybrid Cloud "
+                    f"Console (domain_id: {domain_id}, organization: "
+                    f"{org_id}, auto_enrollment: {ae_enabled})."
+                )
         else:
+            status_code = 200
             msg = "IPA domain is not registered."
-        result = APIResult.from_dict(info, 200, 0, msg)
+        result = APIResult.from_dict(info, status_code, exit_code, msg)
         return {}, result
+
+    def _get_remote_domain_info(self, domain_id: str) -> dict:
+        """Remote request: Get domain info from idmsvc-backend
+
+        Verifies that the current domain is still registered and configured.
+        """
+        resp = self._submit_idmsvc_api(
+            method="GET",
+            subpath=("domains", domain_id),
+        )
+        response = resp.json()
+        schema.validate_schema(response, "IPADomainGetResponse")
+        return response
 
     def mock_domain_reg_token(self) -> typing.Tuple[dict, APIResult]:
         """Test request: Get domain registration token from mockapi
@@ -724,9 +765,7 @@ class HCCAPI:
             logger.error(
                 "Request to %s failed: %s: %s", url, type(e).__name__, e
             )
-            raise APIError.from_response(
-                resp, 4, f"{method} request failed"
-            ) from None
+            raise APIError.from_response(resp, 4, str(e)) from None
         else:
             logger.debug("response: %s", json.dumps(resp.json(), indent=2))
             return resp
