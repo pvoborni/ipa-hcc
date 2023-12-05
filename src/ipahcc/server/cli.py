@@ -108,8 +108,12 @@ def update_jwk_callback(result: hccapi.APIResult) -> None:
     j = result.json()
     if typing.TYPE_CHECKING:
         assert isinstance(j, dict)
-    print(f"Received {len(j['keys'])} JWK(s).")
     print(result.exit_message)
+    kids = sorted(set(j["present"] + j["added"]))
+    print("Registered JWKs:", ", ".join(repr(kid) for kid in kids))
+    revoked_kids = sorted(set(j["revoked"] + j["already_revoked"]))
+    if revoked_kids:
+        print("Revoked JWKs:", ", ".join(repr(kid) for kid in kids))
 
 
 parser_update_jwk = subparsers.add_parser(
@@ -158,16 +162,7 @@ if hccplatform.DEVELOPMENT_MODE:
 def main(args=None):
     args = parser.parse_args(args)
 
-    ipalib.api.bootstrap(
-        in_server=True,
-        confdir=paths.ETC_IPA,
-        context="hcc",
-    )
-    ipalib.api.finalize()
-
-    # hcc.conf or default.conf debug flag
-    if ipalib.api.env.debug:
-        args.verbose = 2
+    # configure logging before api.bootstrap()
     # -v and -vv option
     if args.verbose == 0:
         level = logging.WARNING
@@ -176,6 +171,18 @@ def main(args=None):
     else:
         level = logging.DEBUG
     logging.basicConfig(format="%(message)s", level=level)
+
+    ipalib.api.bootstrap(
+        in_server=True,
+        confdir=paths.ETC_IPA,
+        context="hcc",
+    )
+    ipalib.api.finalize()
+
+    # take debug flag into account
+    if ipalib.api.env.debug:
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
 
     # Python < 3.7 does not have required subparser
     if not getattr(args, "action", None):
@@ -220,9 +227,7 @@ def main(args=None):
         else:
             logger.debug("APIResult: %s", pprint.pformat(result.asdict()))
             if jwk_result is not None:
-                logger.debug(
-                    "JWK Update: %s", pprint.pformat(jwk_result.asdict())
-                )
+                update_jwk_callback(jwk_result)
             args.callback(result)
             if result.exit_code == 0:
                 parser.exit(0)

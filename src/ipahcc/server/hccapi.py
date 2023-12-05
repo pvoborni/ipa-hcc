@@ -43,6 +43,9 @@ _missing = object()
 IPAKeyMap = typing.Dict[
     str, typing.Tuple[sign.KeyState, typing.Optional[sign.JWKDict]]
 ]
+KeyMap = typing.Dict[str, sign.JWKDict]
+RevokedKids = typing.List[str]
+UpdateKeysResult = typing.Dict[str, typing.List[str]]
 
 
 class APIResult(typing.NamedTuple):
@@ -415,7 +418,7 @@ class HCCAPI:
         result = APIResult.from_response(resp, 0, msg)
         return body, result
 
-    def get_signing_keys(self) -> typing.Tuple[dict, APIResult]:
+    def get_signing_keys(self) -> typing.Tuple[KeyMap, RevokedKids]:
         """Remote request: Get host configuration signing keys
 
         Retrieves JWKs and revoked key ids from idmsvc-backend.
@@ -426,9 +429,23 @@ class HCCAPI:
         )
         response = resp.json()
         schema.validate_schema(response, "SigningKeysResponse")
-        msg = "Retrieved hostconf signing keys."
-        result = APIResult.from_response(resp, 0, msg)
-        return {}, result
+
+        keys: KeyMap = {}
+        for jwkstring in response.get("keys", []):
+            try:
+                key = sign.load_key(jwkstring)
+            except (sign.InvalidKey, sign.ExpiredKey) as e:
+                logger.info("Failed to load key %s: %s", jwkstring, e)
+            else:
+                keys[key["kid"]] = key
+        revoked_kids = response.get("revoked_kids", [])
+        logger.info("Received remote keys: %s", ", ".join(sorted(keys)))
+        logger.info(
+            "Received remote revoked kids: %s",
+            ", ".join(sorted(revoked_kids)),
+        )
+
+        return keys, revoked_kids
 
     def get_ipa_jwkset(self) -> sign.JWKSet:
         """Local-only request: Get JWKSet of valid keys from LDAP"""
@@ -446,11 +463,16 @@ class HCCAPI:
         Retrieves the host configuration signing keys from idmsvc-backend
         and updates IPA LDAP with new keys + revoked keys.
         """
-        _, remote_result = self.get_signing_keys()
-        remote_jwks = remote_result.json()
+        remote_jwks, revoked_kids = self.get_signing_keys()
         ipa_jwks = self._get_ipa_hccjwks()
-        self._update_ipa_signing_keys(remote_jwks, ipa_jwks)
-        return {}, remote_result
+        result = self._update_ipa_signing_keys(
+            remote_jwks, revoked_kids, ipa_jwks
+        )
+        msg = (
+            f"Added {len(result['added'])} key(s) and revoked "
+            f"{len(result['revoked'])} key(s)."
+        )
+        return {}, APIResult.from_dict(result, 200, 0, msg)
 
     def _get_ipa_hccjwks(self, *, only_valid: bool = False) -> IPAKeyMap:
         """Local-only request: Lookup known JWKs in LDAP
@@ -471,43 +493,51 @@ class HCCAPI:
         return jwks
 
     def _update_ipa_signing_keys(
-        self, remote: typing.Dict[str, typing.List[str]], ipa_jwks: IPAKeyMap
-    ) -> list:
+        self,
+        remote_keys: KeyMap,
+        revoked_kids: RevokedKids,
+        ipa_jwks: IPAKeyMap,
+    ) -> UpdateKeysResult:
         """Local-only: Update LDAP with information from remote dict
 
         - remote APIResult.json() from get_signing_keys()
         - ipakeys is result of get_ipa_hccjwks()
         """
         updates = []  # batch update
+        result: UpdateKeysResult = {
+            "present": [],
+            "added": [],
+            "revoked": [],
+            "already_revoked": [],
+        }
 
-        for jwkstring in remote.get("keys", []):
-            try:
-                key = sign.load_key(jwkstring)
-            except (sign.InvalidKey, sign.ExpiredKey) as e:
-                logger.info("Failed to load key %s: %s", jwkstring, e)
+        for kid, key in remote_keys.items():
+            if kid in ipa_jwks:
+                logger.debug("Skip: %s is already known", kid)
+                result["present"].append(kid)
             else:
-                kid = key["kid"]
-                if kid in ipa_jwks:
-                    logger.debug("Skip: %s is already known", kid)
-                else:
-                    logger.info("Adding JWK %s (%s)", kid, jwkstring)
-                    updates.append(
-                        {
-                            "method": "hccjwk_add",
-                            "params": [[kid], {"hccpublicjwk": jwkstring}],
-                        }
-                    )
+                result["added"].append(kid)
+                jwkstring: str = key.export_public()
+                logger.info("Adding JWK '%s' (%s)", kid, jwkstring)
+                updates.append(
+                    {
+                        "method": "hccjwk_add",
+                        "params": [[kid], {"hccpublicjwk": jwkstring}],
+                    }
+                )
 
-        for kid in remote.get("revoked_kids", []):
+        for kid in revoked_kids:
             if kid not in ipa_jwks:
-                logger.debug("Skip: Revoked kid %s in not in LDAP", kid)
+                logger.debug("Skip: Revoked kid '%s' in not in LDAP", kid)
                 continue
             state = ipa_jwks[kid][0]
             if state == sign.KeyState.REVOKED:
-                logger.debug("Skip: %s is already marked as revoked", kid)
+                logger.debug("Skip: '%s' is already marked as revoked", kid)
+                result["already_revoked"].append(kid)
                 continue
             else:
-                logger.debug("Mark %s as revoked", kid)
+                result["revoked"].append(kid)
+                logger.info("Mark '%s' as revoked", kid)
                 updates.append(
                     {
                         "method": "hccjwk_revoke",
@@ -516,15 +546,14 @@ class HCCAPI:
                 )
 
         if updates:
-            result = self.api.Command.batch(updates)["results"]
-            for i, entry in enumerate(result):
+            batch = self.api.Command.batch(updates)["results"]
+            for i, entry in enumerate(batch):
                 err = entry.get("error")
                 if err:
                     logger.error("Command %r failed: %s", updates[i], err)
-            return result
         else:
             logger.info("No updates to be performed")
-            return []
+        return result
 
     def _get_domain_id(self, config: typing.Dict[str, typing.Any]):
         domain_id = _get_one(config, "hccdomainid", None)
@@ -675,7 +704,7 @@ class HCCAPI:
             with open(hccplatform.RHSM_CERT, "rb") as f:
                 org_id, cn = parse_rhsm_cert(f.read())
 
-        logger.warning(
+        logger.info(
             "Using dev X-Rh-Fake-Identity O=%s,CN=%s from '%s'.",
             org_id,
             cn,
@@ -723,7 +752,7 @@ class HCCAPI:
             hccplatform.CONFIG.dev_username
             and hccplatform.CONFIG.dev_password
         ):
-            logger.warning(
+            logger.info(
                 "Using dev basic auth with account '%s'",
                 hccplatform.CONFIG.dev_username,
             )
@@ -741,7 +770,7 @@ class HCCAPI:
             with open(hccplatform.RHSM_CERT, "rb") as f:
                 f.read()
 
-        logger.debug("Sending %s request to %s", method, url)
+        logger.info("Sending %s request to %s", method, url)
         logger.debug("headers: %s", headers)
         if payload is not None:
             body = json.dumps(payload, indent=2)

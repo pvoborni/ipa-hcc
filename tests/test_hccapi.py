@@ -222,9 +222,9 @@ class TestHCCAPI(TestHCCAPICommon):
         self.m_session.request.return_value = self.mkresponse(
             200, SIGNING_KEYS_RESPONSE
         )
-        info, resp = self.m_hccapi.get_signing_keys()
-        self.assertEqual(info, {})
-        self.assertIsInstance(resp, hccapi.APIResult)
+        keys, revoked_kids = self.m_hccapi.get_signing_keys()
+        self.assertEqual(set(keys), {JWK_PRIV["kid"]})
+        self.assertEqual(revoked_kids, [REVOKED_KID])
 
     def test_status_check(self):
         self.m_session.request.return_value = self.mkresponse(

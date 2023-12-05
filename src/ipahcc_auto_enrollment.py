@@ -303,14 +303,14 @@ class AutoEnrollment:
             nas = list(cert.subject)
             org_id = nas[0].value
             cn = nas[1].value
-            logger.info(
+            logger.debug(
                 "Using cert info from %s: org_id: %s, cn: %s",
                 RHSM_CERT,
                 org_id,
                 cn,
             )
         else:
-            logger.info(
+            logger.debug(
                 "Using cert info from CLI: org_id: %s, cn: %s", org_id, cn
             )
 
@@ -391,7 +391,6 @@ class AutoEnrollment:
                 req.get_method(),
                 req.get_full_url(),
             )
-            logger.debug("Headers: %s", dict(e.headers))
             if e.headers.get("content-type") == "application/json":
                 j = json.load(e.fp)
                 for error in j.get("errors", ()):
