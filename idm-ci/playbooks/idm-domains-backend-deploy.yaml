@@ -48,21 +48,6 @@
             version: "{{ hmsidm_config.backend_git_branch }}"
             dest: /idm-domains-backend
 
-        # - name: Log into Docker Hub
-        #   command: >
-        #     podman login
-        #       -u {{ hmsidm_config.docker_username }}
-        #       -p {{ hmsidm_config.docker_password }}
-        #       docker.io
-        #   when:
-        #     - hmsidm_config.docker_username
-        #     - hmsidm_config.docker_password
-
-        - name: Build local tools
-          command: make install-xrhidgen install-db-tool
-          args:
-            chdir: /idm-domains-backend
-
         - name: Pull external images (podman-compose pull)
           command: timeout 180 make compose-pull
           args:

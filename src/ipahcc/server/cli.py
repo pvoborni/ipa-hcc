@@ -36,6 +36,9 @@ parser = argparse.ArgumentParser(
         ]
     ),
 )
+parser.set_defaults(
+    prompt_timeout=30,
+)
 parser.add_argument(
     "--verbose",
     "-v",
@@ -62,7 +65,9 @@ parser.add_argument(
 subparsers = parser.add_subparsers(dest="action")
 
 
-def confirm_register(result: hccapi.APIResult) -> bool:
+def confirm_register(
+    args: argparse.Namespace, result: hccapi.APIResult
+) -> bool:
     j = result.json()
     if typing.TYPE_CHECKING:
         assert isinstance(j, dict)
@@ -73,10 +78,16 @@ def confirm_register(result: hccapi.APIResult) -> bool:
     print(f" domain name: {j['domain_name']}")
     print(f" dns domains: {', '.join(dns_domains)}")
     print()
-    return prompt_yesno("Proceed with registration?", default=False)
+    return prompt_yesno(
+        "Proceed with registration?",
+        default=False,
+        timeout=args.prompt_timeout,
+    )
 
 
-def register_callback(result: hccapi.APIResult) -> None:
+def register_callback(
+    args: argparse.Namespace, result: hccapi.APIResult
+) -> None:
     print(result.exit_message)
 
 
@@ -93,7 +104,9 @@ parser_register_old.add_argument(
 )
 
 
-def update_callback(result: hccapi.APIResult) -> None:
+def update_callback(
+    args: argparse.Namespace, result: hccapi.APIResult
+) -> None:
     print(result.exit_message)
 
 
@@ -104,7 +117,9 @@ parser_update.set_defaults(callback=update_callback)
 parser_update.add_argument("--update-server-only", action="store_true")
 
 
-def update_jwk_callback(result: hccapi.APIResult) -> None:
+def update_jwk_callback(
+    args: argparse.Namespace, result: hccapi.APIResult
+) -> None:
     j = result.json()
     if typing.TYPE_CHECKING:
         assert isinstance(j, dict)
@@ -122,7 +137,9 @@ parser_update_jwk = subparsers.add_parser(
 parser_update_jwk.set_defaults(callback=update_jwk_callback)
 
 
-def status_callback(result: hccapi.APIResult) -> None:
+def status_callback(
+    args: argparse.Namespace, result: hccapi.APIResult
+) -> None:
     j = result.json()
     if typing.TYPE_CHECKING:
         assert isinstance(j, dict)
@@ -147,7 +164,9 @@ parser_status.set_defaults(callback=status_callback)
 
 if hccplatform.DEVELOPMENT_MODE:
 
-    def token_callback(result: hccapi.APIResult) -> None:
+    def token_callback(
+        args: argparse.Namespace, result: hccapi.APIResult
+    ) -> None:
         j = result.json()
         if typing.TYPE_CHECKING:
             assert isinstance(j, dict)
@@ -202,7 +221,7 @@ def main(args=None):
                 if not args.unattended and sys.stdin.isatty():
                     # print summary and ask for confirmation
                     _, result = api.status_check()
-                    do_it = confirm_register(result)
+                    do_it = confirm_register(args, result)
                     if not do_it:
                         parser.exit(
                             status=0, message="Registration cancelled\n"
@@ -227,8 +246,8 @@ def main(args=None):
         else:
             logger.debug("APIResult: %s", pprint.pformat(result.asdict()))
             if jwk_result is not None:
-                update_jwk_callback(jwk_result)
-            args.callback(result)
+                update_jwk_callback(args, jwk_result)
+            args.callback(args, result)
             if result.exit_code == 0:
                 parser.exit(0)
             else:

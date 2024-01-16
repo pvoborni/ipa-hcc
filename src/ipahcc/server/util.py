@@ -4,6 +4,7 @@
 # See COPYING for license
 #
 import os
+import signal
 import typing
 from datetime import datetime, timezone
 
@@ -75,8 +76,27 @@ def read_cert_dir(path: str) -> str:
     return "\n".join(data)
 
 
+def _sigalarm(sig, frame):
+    """Raise TimeoutError"""
+    raise TimeoutError
+
+
+def input_timeout(prompt: str, timeout: int = 0) -> str:
+    """input() with optional timeout"""
+    if timeout > 0:
+        orig_sigalarm = signal.signal(signal.SIGALRM, _sigalarm)
+        signal.alarm(timeout)
+    try:
+        return input(prompt)
+    finally:
+        if timeout > 0:
+            # stop alarm and restore original signal handler
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, orig_sigalarm)
+
+
 def prompt_yesno(
-    label, default: typing.Optional[bool] = None
+    label, default: typing.Optional[bool] = None, timeout: int = 0
 ) -> bool:  # pragma: no cover
     """
     Prompt user for yes/no input. This method returns True/False according
@@ -91,6 +111,8 @@ def prompt_yesno(
     a correct answer is provided. Answer is then returned.
 
     `KeyboardInterrupt` or `EOFError` is interpreted as "no".
+
+    `TimeoutError` (raised by `signal.alarm`) is interpreted as "no", too.
     """
     default_prompt = None  # type: typing.Optional[str]
     if default is not None:
@@ -106,8 +128,8 @@ def prompt_yesno(
 
     while True:
         try:
-            data = input(prompt).lower()
-        except (KeyboardInterrupt, EOFError):
+            data = input_timeout(prompt, timeout=timeout).lower()
+        except (KeyboardInterrupt, EOFError, TimeoutError):
             return False
         else:
             if data in ("y", "yes"):
