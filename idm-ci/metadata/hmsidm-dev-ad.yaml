@@ -14,7 +14,7 @@ domains:
       - name: client.hmsidm-dev.test
         role: client
         group: ipaclient
-        os: rhel-9.2
+        os: rhel-9.3
   - name: windows.test
     type: ad
     hosts:

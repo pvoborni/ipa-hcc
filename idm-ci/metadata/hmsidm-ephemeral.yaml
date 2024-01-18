@@ -12,15 +12,15 @@ domains:
       - name: server.hmsidm-dev.test
         role: master
         group: ipaserver
-        os: rhel-9.2
+        os: rhel-9.3
       # - name: replica1.hmsidm-dev.test
       #   role: replica
       #   group: ipaserver
-      #   os: rhel-9.2
-      - name: client92.hmsidm-dev.test
+      #   os: rhel-9.3
+      - name: client93.hmsidm-dev.test
         role: client
         group: ipaclient
-        os: rhel-9.2
+        os: rhel-9.3
 phases:
   - name: init
     steps:

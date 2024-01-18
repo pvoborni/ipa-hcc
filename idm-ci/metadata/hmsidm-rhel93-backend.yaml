@@ -1,21 +1,29 @@
 ---
+# Test with a local compose of idm-domains-backed.
+# Client enrollment is not implemented yet.
 domains:
-  - name: rhel92.hmsidm.test
+  - name: idb.hmsidm.test
     type: IPA
     hosts:
-      - name: server92.rhel92.hmsidm.test
+      - name: server93.idb.hmsidm.test
         role: master
         group: ipaserver
-        os: rhel-9.2
+        os: rhel-9.3
 
-      - name: client88.rhel92.hmsidm.test
-        role: client
+      # - name: client89.idb.hmsidm.test
+      #   role: client
+      #   group: ipaclient
+      #   os: rhel-8.9
+      # - name: client93.idb.hmsidm.test
+      #   role: client
+      #   group: ipaclient
+      #   os: rhel-9.3
+      - name: backend.idb.hmsidm.test
+        role: backend
+        # medium machine, Go compiler requires lots of RAM
+        size: medium
         group: ipaclient
-        os: rhel-8.8
-      - name: client92.rhel92.hmsidm.test
-        role: client
-        group: ipaclient
-        os: rhel-9.2
+        os: rhel-9.3
 phases:
   - name: init
     steps:
@@ -26,7 +34,7 @@ phases:
           branch: "{{ lookup('env', 'CI_MERGE_REQUEST_SOURCE_BRANCH_NAME', default='main') }}"
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-check-env.yaml
         extra_vars:
-          expects_envs: "prod stage"
+          expects_envs: "compose"
   - name: provision
     steps:
       - playbook: provision/mrack-up.yaml
@@ -42,13 +50,11 @@ phases:
       - playbook: prep/repos.yaml
       - playbook: prep/install-ipa-packages.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend-deploy.yaml
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml
   - name: test
     steps:
-      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
-        extra_vars:
-          target_group: ipaserver
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
       - playbook: prep/ipa-server-install.yaml
         extra_vars:
@@ -56,14 +62,8 @@ phases:
       - playbook: prep/ipa-replica-install.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-fix-forwarders.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-post-configure.yaml
-      # - playbook: prep/hmsidm-auto-enrollment.yaml
-      # trigger auto-enrollment
-      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
-        extra_vars:
-          target_group: ipaclient
-      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend-test.yaml
   - name: teardown
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
-      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
       - playbook: teardown/mrack-destroy.yaml

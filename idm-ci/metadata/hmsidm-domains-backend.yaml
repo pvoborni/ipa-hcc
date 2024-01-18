@@ -10,17 +10,17 @@ domains:
       - name: server.hmsidm-dev.test
         role: master
         group: ipaserver
-        os: rhel-9.2
-      - name: client92.hmsidm-dev.test
+        os: rhel-9.3
+      - name: client93.hmsidm-dev.test
         role: client
         group: ipaclient
-        os: rhel-9.2
+        os: rhel-9.3
       - name: backend.hmsidm-dev.test
         role: backend
         # medium machine, Go compiler requires lots of RAM
         size: medium
         group: ipaclient
-        os: rhel-9.2
+        os: rhel-9.3
 phases:
   - name: init
     steps:

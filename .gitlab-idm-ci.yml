@@ -1,10 +1,10 @@
 ---
 # current RHEL versions
-srv92_c88_92:
+srv93_c89_93:
   extends: .mr_template
   needs: ["rpms", "tox_check_f38", "tox_check_f39"]
   variables:
-    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92.yaml
+    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel93.yaml
     RHC_ENV: "stage"
     # uses RHC_ORG, RHC_KEY, RH_API_TOKEN settings
   except:
@@ -12,11 +12,11 @@ srv92_c88_92:
       - $CI_MERGE_REQUEST_LABELS =~ /.*skip idm-ci.*/
 
 # test with idm-domains-backend, does not use RHC
-srv92_backend:
+srv93_backend:
   extends: .mr_template
   needs: ["rpms", "tox_check_f38", "tox_check_f39"]
   variables:
-    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel92-backend.yaml
+    METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel93-backend.yaml
     RHC_ENV: "compose"
   except:
     variables:
