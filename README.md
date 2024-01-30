@@ -307,6 +307,8 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 
 ## Development and Testing
 
+See `CONTRIBUTING.md` for how to contribute to this repository.
+
 See `DEVELOPMENT.md` for instructions how to set up local development
 environment and how to utilize `idm-ci` for testing.
 
