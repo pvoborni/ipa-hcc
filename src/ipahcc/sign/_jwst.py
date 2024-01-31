@@ -17,6 +17,7 @@ Additional private claims:
   - "rhdomid" (string) HMSIDM domain id
   - "rhfqdn" (string) hosts' fully qualified domain name
 """
+
 import base64
 import os
 import typing

@@ -6,6 +6,7 @@ be root or enrollment agent user.
 Run::
     # python3 -m unittest -v tests/test_ipaserver_integration.py
 """
+
 import datetime
 import os
 import unittest

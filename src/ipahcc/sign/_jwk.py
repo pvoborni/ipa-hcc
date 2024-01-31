@@ -6,6 +6,7 @@
 - 'use' is set to 'sig' (signing)
 - additional key 'exp' with key expiration time
 """
+
 import enum
 import time
 import typing

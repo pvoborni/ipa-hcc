@@ -37,7 +37,7 @@ CP_CONFIG = $(CP_PD) -n
 # rpkg --outdir must be an absolute path
 RPKGDIR=$(abs_srcdir)/build/rpkg
 
-CERT = tests/clients/3ecb23bf-c99b-40ec-bec5-d884a63ddf12.pem
+CERT = tests/clients/3cc18ba1-1bdf-4873-b95d-7375789eefbd.pem
 OPENAPI_YAML = api/public.openapi.yaml
 
 VENV = .venv

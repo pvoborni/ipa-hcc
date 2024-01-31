@@ -21,13 +21,9 @@ ipa_hcc_copr: "@podengo/ipa-hcc"
 
 # Ephemeral environment
 # oc get routes -l app=hmsidm-backend -o jsonpath='{.items[0].spec.host}'
-idmsvc_backend: "{{ lookup('env', 'IDMSVC_BACKEND', default=undef()) }}"
-dev_username: "{{ lookup('env', 'DEV_USERNAME', default=undef()) }}"
-dev_password: "{{ lookup('env', 'DEV_PASSWORD', default=undef()) }}"
-
-# # Docker Hub credentials (to avoid rate limiting), not needed at the moment
-# docker_username: "{{ lookup('env', 'DOCKER_USERNAME', default=undef()) }}"
-# docker_password: "{{ lookup('env', 'DOCKER_PASSWORD', default=undef()) }}"
+idmsvc_backend: "{{ lookup('env', 'IDMSVC_BACKEND', default='') }}"
+dev_username: "{{ lookup('env', 'DEV_USERNAME', default='') }}"
+dev_password: "{{ lookup('env', 'DEV_PASSWORD', default='') }}"
 
 # compose: backend source
 backend_git_repo: "{{ lookup('env', 'BACKEND_GIT_REPO') | default('https://github.com/podengo-project/idmsvc-backend.git', True) }}"

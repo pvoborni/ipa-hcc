@@ -133,9 +133,7 @@ class JSONWSGIApp:
             for path, methmap in sorted(routes.items())
         ]
 
-    def _route_lookup(
-        self, env: dict
-    ) -> typing.Tuple[
+    def _route_lookup(self, env: dict) -> typing.Tuple[
         typing.Callable,
         typing.Optional[str],
         typing.Dict[str, typing.Any],

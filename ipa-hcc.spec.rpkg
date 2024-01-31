@@ -100,11 +100,7 @@ Requires: %{ipa_name}-server >= %{ipa_version}
 Requires(post): %{ipa_name}-server >= %{ipa_version}
 Requires: httpd
 Requires: mod_ssl
-Requires: python3-mod_wsgi
-Requires: python3-jsonschema
-Requires: python3-jwcrypto
 Requires: python3-requests
-Requires: python3-systemd
 Requires: selinux-policy
 Requires(post): selinux-policy
 %{?systemd_requires}

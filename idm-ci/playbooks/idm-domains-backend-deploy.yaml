@@ -19,8 +19,6 @@
 
         - name: Enable code ready builder CRB for EPEL
           shell: yum config-manager --set-enabled "*CRB*"
-          args:
-              warn: no
 
         - name: Enable EPEL for podman-compose
           yum:
