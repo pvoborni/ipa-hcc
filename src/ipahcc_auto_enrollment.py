@@ -174,7 +174,7 @@ parser.add_argument(
         "URL of Hybrid Cloud Console API with cert auth "
         f"(default: {DEFAULT_IDMSVC_API_URL})"
     ),
-    default=None,
+    default=DEFAULT_IDMSVC_API_URL,
 )
 
 group = parser.add_argument_group("domain filter")

@@ -123,6 +123,7 @@ ignore = [
     "PLR5501", # Consider using `elif`
     "S101", # Use of `assert` detected
     "S310", # Audit URL open for permitted schemes
+    "S603", # untrusted input
     "F811", # Redefinition of unused {name} from line
 ]
 # lowest supported version

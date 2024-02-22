@@ -187,6 +187,11 @@ install_client_prepare:
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/sysconfig
 	$(CP_CONFIG) $(srcdir)/install/client/sysconfig/ipa-hcc-client-prepare $(DEST)$(SYSCONFDIR)/sysconfig/
 
+.PHONY: install_stage_console
+install_stage_console:
+	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
+	$(CP_PD) $(srcdir)/src/ipahcc_stage_console.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
+
 .PHONY: install_server_plugin
 install_server_plugin:
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa

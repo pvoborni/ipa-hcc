@@ -27,6 +27,10 @@
 # includes mockapi server and client prepare for Ephemeral
 %bcond_without mockapi
 
+# --without stage_console (enabled by default)
+# setup system for internal stage console
+%bcond_without stage_console
+
 # local development
 %bcond_with devel
 
@@ -205,6 +209,28 @@ environment. The package also enables ipa-hcc-auto-enrollment.service.
 # mockapi and ephemeral client-prepare
 %endif
 
+
+%if %{with stage_console}
+%package stage-console
+Summary: IPA HCC: Stage Console configuration
+BuildArch: noarch
+
+Requires(post): python3
+Requires(post): rhc
+Requires(post): insights-client
+
+%description stage-console
+This package configures subscription manager, rhc, insights-client, and
+ipa-hcc-auto-enrollment.service to use the internal Stage Console. The
+system is reconfigured during package installation.
+
+%posttrans stage-console
+/usr/libexec/ipa-hcc/ipa-hcc-stage-console --verbose stage.redhat.com
+
+# stage_console
+%endif
+
+
 %package client
 Summary: Automatic IPA client enrollment for Hybrid Cloud Console
 BuildArch: noarch
@@ -283,6 +309,9 @@ rm %{buildroot}/%{python_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.p
 rm %{buildroot}/%{python_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
 %endif
 
+%if %{with stage_console}
+%__make DEST=%{buildroot} PREFIX=%{_prefix} PYTHON=%{python} PYTHON_SITELIB=%{python_sitelib} VERSION=%{version} install_stage_console
+%endif
 
 %if %{with server}
 %files server
@@ -347,6 +376,15 @@ rm %{buildroot}/%{python_sitelib}/ipaserver/install/plugins/__pycache__/update_h
 
 # with mockapi
 %endif
+
+%if %{with stage_console}
+%files stage-console
+%doc README.md CONTRIBUTORS.txt
+%license COPYING
+%attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-stage-console
+# with stage_console
+%endif
+
 
 %files client
 %doc README.md CONTRIBUTORS.txt
