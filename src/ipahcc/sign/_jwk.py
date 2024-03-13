@@ -111,12 +111,9 @@ else:
                 return True
 
         def __iter__(self):
-            for key in self._params:
-                yield key
-            for key in self._key:
-                yield key
-            for key in self._unknown:
-                yield key
+            yield from self._params
+            yield from self._key
+            yield from self._unknown
 
         def export_public(self, as_dict=False):
             """Exports the public key in the standard JSON format."""
