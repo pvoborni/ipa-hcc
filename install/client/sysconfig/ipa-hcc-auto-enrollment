@@ -1,2 +1,2 @@
 # --insecure
-AUTO_ENROLLMENT_ARGS="---idmsvc-api-url https://cert.console.stage.redhat.com/api/idmsvc/v1"
+AUTO_ENROLLMENT_ARGS="--idmsvc-api-url https://cert.console.stage.redhat.com/api/idmsvc/v1"
