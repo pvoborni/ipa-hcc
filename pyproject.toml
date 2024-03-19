@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ipahcc"
-version = "0.13"
+version = "0.14"
 description = "IPA enrollment agent for Red Hat Hybrid Cloud Console"
 readme = "README.md"
 authors = [
