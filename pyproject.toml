@@ -47,6 +47,7 @@ packages = [
 py-modules = [
     "ipahcc_auto_enrollment",
     "ipahcc_client_prepare",
+    "ipahcc_stage_console",
 ]
 
 [tool.setuptools.package-data]

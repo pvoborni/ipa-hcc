@@ -27,7 +27,7 @@ from ipapython.dnsutil import get_ipa_resolver
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
 # version is updated by Makefile
-VERSION = "0.12"
+VERSION = "0.13"
 
 HCCCONF_URI = "_hccconf.podengo-project.internal."
 RHSM_CERT = "/etc/pki/consumer/cert.pem"

@@ -16,6 +16,9 @@ import pathlib
 import shutil
 import subprocess
 
+# version is updated by Makefile
+VERSION = "0.13"
+
 RHSM_CONF = pathlib.Path("/etc/rhsm/rhsm.conf")
 RHSM_SERVER_HOSTNAME = "subscription.rhsm.{suffix}"
 RHSM_RHSM_BASEURL = "https://cdn.{suffix}"
@@ -56,6 +59,13 @@ parser.add_argument(
     dest="verbose",
     default=0,
     action="count",
+)
+parser.add_argument(
+    "--version",
+    "-V",
+    help="Show version number and exit",
+    action="version",
+    version=f"ipa-hcc {VERSION}",
 )
 parser.add_argument(
     "suffix",

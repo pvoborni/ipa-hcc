@@ -20,6 +20,7 @@ jobs:
           - "py,py36,py39,cov"
           - "ruff,mypy,pylint"
           - "jslint,yamllint,maketest"
+          - "rpkg"
         image:
           - quay.io/podengo/ipa-hcc-ci:f38
           - quay.io/podengo/ipa-hcc-ci:f39
@@ -82,7 +83,7 @@ jobs:
       - name: "Install build dependencies"
         run: yum-builddep -y $GITHUB_WORKSPACE/ipa-hcc.spec
       - name: "Rebuild binary packages from source file"
-        run: rpmbuild --rebuild $GITHUB_WORKSPACE/ipa-hcc*.src.rpm
+        run: rpmbuild --rebuild $GITHUB_WORKSPACE/ipa-hcc*.src.rpm --with client --with mockapi --with stageconsole
       - name: "Create repo"
         run: createrepo $RPMBUILD/RPMS
       - name: "Store RPM"

@@ -61,7 +61,7 @@
         state: absent
 
     - name: Rebuild packages
-      shell: rpmbuild --rebuild /tmp/rpkg/ipa-hcc*.src.rpm
+      shell: rpmbuild --rebuild /tmp/rpkg/ipa-hcc*.src.rpm --with client --with mockapi --with stageconsole
 
     - name: Create repo
       command: createrepo /root/rpmbuild/RPMS/

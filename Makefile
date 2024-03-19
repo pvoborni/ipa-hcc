@@ -1,4 +1,6 @@
 VERSION = 0.13
+RPM_WITH = client mockapi stageconsole
+RPM_WITHOHT =
 
 srcdir = .
 abs_srcdir = $(shell pwd)
@@ -10,8 +12,8 @@ SYSCONFDIR := $(shell rpm --eval '%{_sysconfdir}')
 PREFIX = $(shell rpm --eval '%{_prefix}')
 # /usr/share
 DATADIR := $(shell rpm --eval '%{_datadir}')
-# /usr/bin/pythonX
-PYTHON := /usr/bin/python3
+# /usr/bin/python3 or /usr/libexec/platform-python
+PYTHON := $(shell rpm --eval '%{python3}')
 # /usr/lib/pythonX.Y/site-packages
 PYTHON_SITELIB := $(shell $(PYTHON) -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
 # /usr/sbin
@@ -36,6 +38,8 @@ CP_CONFIG = $(CP_PD) -n
 
 # rpkg --outdir must be an absolute path
 RPKGDIR=$(abs_srcdir)/build/rpkg
+SPECDIR=build/spec
+FEDORASPECDIR=$(srcdir)/build/fedora
 
 CERT = tests/clients/3cc18ba1-1bdf-4873-b95d-7375789eefbd.pem
 OPENAPI_YAML = api/public.openapi.yaml
@@ -95,11 +99,16 @@ lint: ruff
 ruff:
 	tox -e ruff
 
-.PHONY: version
-version:
+.PHONY: module_version
+module_version:
 	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' \
 		$(srcdir)/src/ipahcc/hccplatform.py \
-		$(srcdir)/src/ipahcc_auto_enrollment.py
+		$(srcdir)/src/ipahcc_auto_enrollment.py \
+		$(srcdir)/src/ipahcc_client_prepare.py \
+		$(srcdir)/src/ipahcc_stage_console.py
+
+.PHONY: version
+version: module_version
 	sed -i 's/^version\ =\ ".*/version = "$(VERSION)"/g' \
 		$(srcdir)/pyproject.toml
 	sed -i 's/^version\ =\ .*/version = $(VERSION)/g' \
@@ -110,8 +119,25 @@ rpkg: $(OPENAPI_YAML)
 	@if ! test -d .git; then echo "rpkg requires a git repository" >&2; exit 2; fi
 	@rm -rf $(RPKGDIR)
 	@mkdir -p $(RPKGDIR)
-	rpkg local --outdir $(RPKGDIR)
+	rpkg local --outdir $(RPKGDIR) $(foreach cond,$(RPM_WITH),--with $(cond)) $(foreach cond,$(RPM_WITHOUT),--without $(cond))
 	rpmlint --ignore-unused-rpmlintrc --strict -r ipa-hcc.rpmlintrc $(RPKGDIR)
+	@find $(RPKGDIR) -name '*.rpm' -printf "%f\n"
+
+$(SPECDIR)/ipa-hcc.spec: $(srcdir)/ipa-hcc.spec.rpkg .git/index $(MAKEFILE_LIST)
+	@rm -f $@
+	@mkdir -p $(dir $@)
+	rpkg spec --outdir $(abspath $(dir $@))
+
+$(FEDORASPECDIR)/ipa-hcc.spec: $(SPECDIR)/ipa-hcc.spec
+	@mkdir -p $(dir $@)
+	sed \
+		-e s'|^VCS:.*||' \
+		-e 's|^Source:.*|Source:\t\thttps://github.com/podengo-project/ipa-hcc/archive/refs/tags/ipa-hcc-%{version}-1.tar.gz|' \
+		-e 's|^%setup.*|%autosetup -c|' \
+		$< > $@
+
+.PHONY: spec
+spec: $(FEDORASPECDIR)/ipa-hcc.spec
 
 .PHONY: test
 test:
@@ -157,19 +183,18 @@ stubgen:
 
 .PHONY: install_python
 install_python:
-	@# $(PYTHON) -m pip install -I $(srcdir) --root $(DEST) --prefix $(PREFIX) --no-deps --no-index --no-warn-script-location
 	$(PYTHON) setup.py install -O1 --root $(DEST) --prefix $(PREFIX)
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc/hccplatform.py
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(PYTHON_SITELIB)/ipahcc_client_prepare.py
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(PYTHON_SITELIB)/ipahcc_client_prepare.py
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' \
+		$(DEST)$(PYTHON_SITELIB)/ipahcc/hccplatform.py \
+		$(DEST)$(PYTHON_SITELIB)/ipahcc_*.py
 
 .PHONY: install_client
 install_client:
 	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
-	$(CP_PD) $(DEST)$(PYTHON_SITELIB)/ipahcc_auto_enrollment.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
+	$(CP_PD) $(srcdir)/src/ipahcc_auto_enrollment.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
 	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
+	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
 
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-auto-enrollment.service $(DEST)$(UNITDIR)/
@@ -179,8 +204,10 @@ install_client:
 .PHONY: install_client_prepare
 install_client_prepare:
 	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
-	$(CP_PD) $(DEST)$(PYTHON_SITELIB)/ipahcc_client_prepare.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
+	$(CP_PD) $(srcdir)/src/ipahcc_client_prepare.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
 	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
+	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
 
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-client-prepare.service $(DEST)$(UNITDIR)/
@@ -191,6 +218,9 @@ install_client_prepare:
 install_stage_console:
 	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
 	$(CP_PD) $(srcdir)/src/ipahcc_stage_console.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
+	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
+	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
+	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
 
 .PHONY: install_server_plugin
 install_server_plugin:
