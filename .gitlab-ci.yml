@@ -37,7 +37,7 @@ srpm:
     - shared
   stage: srpm
   needs: []
-  image: quay.io/podengo/ipa-hcc-ci:fedora
+  image: quay.io/podengo/ipa-hcc-ci:f39
   before_script:
     - dnf install -y 'dnf-command(builddep)'
     - mkdir -p $CI_PROJECT_DIR/rpkg

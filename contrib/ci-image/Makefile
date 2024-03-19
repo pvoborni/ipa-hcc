@@ -9,7 +9,6 @@ all: 8 9 f38 f39
 9: ipa-hcc.spec
 	podman build -f Containerfile.$@ -t $(PREFIX):$@ .
 
-
 f38: requirements.txt ipa-hcc.spec
 	podman build -f Containerfile.fedora --build-arg=VERSION=38 -t $(PREFIX):$@ .
 
@@ -21,6 +20,9 @@ push: 8 9 f38 f39
 	podman push $(PREFIX):9
 	podman push $(PREFIX):f38
 	podman push $(PREFIX):f39
+
+rmi:
+	podman rmi $(PREFIX):8 $(PREFIX):9 $(PREFIX):f38 $(PREFIX):f39
 
 requirements.txt: ../../requirements.txt
 	cp -a $^ $@

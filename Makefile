@@ -37,9 +37,11 @@ CP_PD = cp -p -d
 CP_CONFIG = $(CP_PD) -n
 
 # rpkg --outdir must be an absolute path
-RPKGDIR=$(abs_srcdir)/build/rpkg
-SPECDIR=build/spec
-FEDORASPECDIR=$(srcdir)/build/fedora
+RPKGDIR = $(abs_srcdir)/build/rpkg
+SPECDIR = build/spec
+FEDORABUILDDIR = $(srcdir)/build/fedora
+
+FEDORA_RPMDIRS = $(FEDORABUILDDIR)/BUILD $(FEDORABUILDDIR)/BUILDROOT $(FEDORABUILDDIR)/RPMS $(FEDORABUILDDIR)/SOURCES $(FEDORABUILDDIR)/SRPMS
 
 CERT = tests/clients/3cc18ba1-1bdf-4873-b95d-7375789eefbd.pem
 OPENAPI_YAML = api/public.openapi.yaml
@@ -128,16 +130,30 @@ $(SPECDIR)/ipa-hcc.spec: $(srcdir)/ipa-hcc.spec.rpkg .git/index $(MAKEFILE_LIST)
 	@mkdir -p $(dir $@)
 	rpkg spec --outdir $(abspath $(dir $@))
 
-$(FEDORASPECDIR)/ipa-hcc.spec: $(SPECDIR)/ipa-hcc.spec
+$(FEDORABUILDDIR)/ipa-hcc.spec: $(SPECDIR)/ipa-hcc.spec
 	@mkdir -p $(dir $@)
 	sed \
 		-e s'|^VCS:.*||' \
+		-e s'|^Version:.*|Version:\t\t$(VERSION)|' \
 		-e 's|^Source:.*|Source:\t\thttps://github.com/podengo-project/ipa-hcc/archive/refs/tags/ipa-hcc-%{version}-1.tar.gz|' \
-		-e 's|^%setup.*|%autosetup -c|' \
+		-e 's|^%setup.*|%autosetup -n ipa-hcc-ipa-hcc-%{version}-1|' \
 		$< > $@
 
 .PHONY: spec
-spec: $(FEDORASPECDIR)/ipa-hcc.spec
+spec: $(FEDORABUILDDIR)/ipa-hcc.spec
+
+.PHONY: fedorabuild
+fedorabuild: $(FEDORABUILDDIR)/ipa-hcc.spec
+	rm -rf $(FEDORA_RPMDIRS)
+	mkdir -p $(FEDORA_RPMDIRS)
+	spectool --get-files --sourcedir --define "_topdir $(abspath $(FEDORABUILDDIR))" $<
+
+	rpmbuild \
+		--define "_topdir $(abspath $(FEDORABUILDDIR))" \
+		$(foreach cond,$(RPM_WITH),--with $(cond)) \
+		$(foreach cond,$(RPM_WITHOUT),--without $(cond)) \
+		-ba $<
+	find $(FEDORABUILDDIR) -name '*.rpm'
 
 .PHONY: test
 test:

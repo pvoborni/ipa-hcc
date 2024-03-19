@@ -33,7 +33,7 @@ jobs:
   srpm:
     name: "srpm"
     runs-on: "ubuntu-latest"
-    container: quay.io/podengo/ipa-hcc-ci:fedora
+    container: quay.io/podengo/ipa-hcc-ci:f39
     env:
       RPKGDIR: "$GITHUB_WORKSPACE/build/rpkg"
     steps:

@@ -2,8 +2,11 @@
 FROM quay.io/centos/centos:stream9
 COPY ipa-hcc.spec /tmp/
 RUN dnf update -y \
+    && dnf install --nodocs --setopt=install_weak_deps=False -y dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
     && dnf install --nodocs --setopt=install_weak_deps=False -y --best \
-        rpm-build createrepo dnf-utils \
+        rpm-build createrepo dnf-utils dnf-plugins-core \
+        python3-pip python3-tomli python3-wheel \
     && dnf builddep --nodocs --setopt=install_weak_deps=False -y --best \
         --spec /tmp/ipa-hcc.spec \
     && dnf clean all
