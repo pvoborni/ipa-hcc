@@ -3,9 +3,6 @@
   gather_facts: False
   tasks:
     - name: Make machines permanent
-      shell: |
-        . ./config/openstack.rc.sh
+      command:
         openstack server set --name permanent-hmsidm-{{ meta_fqdn }} {{ meta_provider_id }}
-      args:
-        chdir: "{{twd}}"
       delegate_to: localhost

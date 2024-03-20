@@ -305,6 +305,39 @@ IdM does not implement [#9272](https://pagure.io/freeipa/issue/9272)
 - Kerberos KDC loads extra PKINIT trust anchors from
   `DIR:/usr/share/ipa-hcc/cacerts`.
 
+## Known issues
+
+### Global authentication types affect host auth
+
+* Affects: RHEL 8.9, 9.3, and earlier
+* Ticket: https://pagure.io/freeipa/issue/9485
+
+IPA's KDC KDB plugin has a known issue related to global user auth
+configuration. If an admin sets a global policy for user auth types and does
+not include `pkinit`, then the KDC refuses cert authentication for hosts.
+
+```shell
+$ ipa config-mod --user-auth-type=password --user-auth-type=otp
+$ ipa config-show
+...
+Default user authentication types: password, otp
+```
+
+`ipa-client-install` fails with:
+```
+kinit: KDC policy rejects request while getting initial credentials
+```
+
+and `/var/log/krb5kdc.log` contains:
+```
+PKINIT pre-authentication not allowed for this user.: host/host.ipa.example@IPA.EXAMPLE for krbtgt/IPA.EXAMPLE@IPA.EXAMPLE, KDC policy rejects request
+```
+
+Workaround: also enable `pkinit`:
+```shell
+ipa config-mod --user-auth-type=password --user-auth-type=otp --user-auth-type=pkinit
+```
+
 ## Development and Testing
 
 See `CONTRIBUTING.md` for how to contribute to this repository.

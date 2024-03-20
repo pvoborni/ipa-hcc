@@ -2,7 +2,7 @@
 # settings are provided by CI/CD pipeline or `idm-ci/secrets` source file
 # Stage account settings are backed up in `ETHEL_EXPORTED_ACCOUNTS` secret.
 
-# "prod", "stage", "ephemeral", or "compose"
+# "prod", "stage", "stage-mockapi", "ephemeral", or "compose"
 rhc_env: "{{ lookup('env', 'RHC_ENV', default=undef()) }}"
 
 # organization id and activation key

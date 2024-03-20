@@ -10,7 +10,7 @@
         msg: >
           Invalid or missing 'RHC_ENV' variable (got '{{ hmsidm_config.rhc_env }}').
           Did you forget to source 'idm-ci/secrets' file?
-      when: 'hmsidm_config.rhc_env is not defined or hmsidm_config.rhc_env not in ["prod", "stage", "ephemeral", "compose"]'
+      when: 'hmsidm_config.rhc_env is not defined or hmsidm_config.rhc_env not in ["prod", "stage", "stage-mockapi", "ephemeral", "compose"]'
 
     - name: Check for expected RHC_ENV
       fail:
@@ -24,11 +24,11 @@
         msg: "The metadata file requires 'RHC_ORG' value."
       when:
         - not hmsidm_config.rhc_org
-        - hmsidm_config.rhc_env in ['prod', 'stage']
+        - hmsidm_config.rhc_env in ['prod', 'stage', 'stage-mockapi']
 
     - name: Check for RHC_KEY
       fail:
         msg: "The metadata file requires 'RHC_KEY' value."
       when:
         - not hmsidm_config.rhc_key
-        - hmsidm_config.rhc_env in ['prod', 'stage']
+        - hmsidm_config.rhc_env in ['prod', 'stage', 'stage-mockapi']

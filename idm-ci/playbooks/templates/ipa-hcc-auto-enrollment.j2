@@ -1,1 +1,16 @@
+{% if hmsidm_config.rhc_env == 'prod' %}
+# Prod console
+AUTO_ENROLLMENT_ARGS="--idmsvc-api-url https://cert.console.redhat.com/api/idmsvc/v1"
+{% elif hmsidm_config.rhc_env == 'stage' %}
+# Stage console
+AUTO_ENROLLMENT_ARGS="--idmsvc-api-url https://cert.console.stage.redhat.com/api/idmsvc/v1"
+{% elif hmsidm_config.rhc_env == 'stage-mockapi' %}
+# mockapi
 AUTO_ENROLLMENT_ARGS="--insecure --idmsvc-api-url https://{{ hostvars[groups.ipaserver.0].meta_fqdn }}/api/idmsvc/v1"
+{% elif hmsidm_config.rhc_env == 'ephemeral' %}
+# Ephemeral environment
+AUTO_ENROLLMENT_ARGS="--insecure --idmsvc-api-url https://{{ hmsidm_config.idmsvc_backend }}/api/idmsvc/v1"
+{% elif hmsidm_config.rhc_env == 'compose' %}
+# compose backend
+AUTO_ENROLLMENT_ARGS="--insecure --idmsvc-api-url http://{{ (groups.all | map('extract', hostvars) | selectattr('meta_role', 'equalto', 'backend') | first).meta_fqdn }}:8000/api/idmsvc/v1"
+{% endif %}

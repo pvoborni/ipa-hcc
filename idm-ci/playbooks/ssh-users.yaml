@@ -1,0 +1,15 @@
+---
+- hosts: all:!ad
+  become: true
+  become_method: sudo
+  tasks:
+  - name: Allow developers to ssh into cloud-user account
+    ansible.posix.authorized_key:
+      user: cloud-user
+      state: present
+      key: "https://github.com/{{ item }}.keys"
+    with_items:
+      - aadhikar
+      - avisiedo
+      - frasertweedale
+      - tiran

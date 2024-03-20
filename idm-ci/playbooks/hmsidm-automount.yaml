@@ -35,7 +35,7 @@
           echo Secret123 | kinit admin
 
       - name: Change default homedir base to /home/ipausers, update shell, and auth
-        command: "ipa config-mod --homedirectory=/home/ipausers --defaultshell=/bin/bash --user-auth-type=password --user-auth-type=otp"
+        command: "ipa config-mod --homedirectory=/home/ipausers --defaultshell=/bin/bash --user-auth-type=password --user-auth-type=otp --user-auth-type=pkinit"
         register: result
         failed_when:
           - result.rc != 0

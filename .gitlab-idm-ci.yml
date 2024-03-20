@@ -5,7 +5,8 @@ srv93_c89_93:
   needs: ["rpms", "tox_check_f38", "tox_check_f39"]
   variables:
     METADATA_FILE_PATH: idm-ci/metadata/hmsidm-rhel93.yaml
-    RHC_ENV: "stage"
+    # use mockapi with staging RHSM and HBI
+    RHC_ENV: "stage-mockapi"
     # uses RHC_ORG, RHC_KEY, RH_API_TOKEN settings
   except:
     variables:

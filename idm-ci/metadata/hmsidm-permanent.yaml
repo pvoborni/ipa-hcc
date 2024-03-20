@@ -17,15 +17,17 @@ domains:
         role: client
         group: ipaclient
         os: rhel-9.3
-      - name: backend.ipahcc.test
-        role: backend
-        size: medium
+      - name: client89.ipahcc.test
+        role: client
         group: ipaclient
-        os: rhel-9.3
+        os: rhel-8.9
 phases:
   - name: init
     steps:
       - playbook: init/testrunner-dir.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-check-env.yaml
+        extra_vars:
+          expects_envs: "prod stage stage-mockapi"
   - name: provision
     steps:
       - playbook: provision/mrack-up.yaml
@@ -38,18 +40,20 @@ phases:
       - playbook: prep/repos.yaml
       - playbook: prep/install-ipa-packages.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-enable-copr.yaml
-      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml
-  - name: backend
+  - name: ipa-hcc
     steps:
-      - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend-deploy.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/ssh-users.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
+        extra_vars:
+          mockapi: false
+      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
   - name: server
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaserver
-      - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-pre-configure.yaml
       - playbook: prep/ipa-server-install.yaml
         extra_vars:
           setup_kra: false

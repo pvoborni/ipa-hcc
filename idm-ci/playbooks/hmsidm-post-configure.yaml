@@ -15,9 +15,9 @@
       command: "ipa config-show --raw"
       register: ipaconfig
 
-    - name: Register domain
+    - name: Register domain (only stage-mockapi)
       when:
-        - hmsidm_config.rhc_env in ['prod', 'stage']
+        - hmsidm_config.rhc_env == 'stage-mockapi'
         - meta_role == 'master'
         - "'hccdomainid' not in ipaconfig.stdout"
       block:

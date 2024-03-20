@@ -7,9 +7,24 @@
       yum:
         name:
           - ipa-hcc-server
+        state: latest
+        update_cache: true
+
+    - name: Install ipa-hcc mockapi
+      yum:
+        name:
           - ipa-hcc-mockapi
         state: latest
         update_cache: true
+      when: mockapi is undefined or mockapi
+
+    - name: Remove ipa-hcc mockapi
+      yum:
+        name:
+          - ipa-hcc-mockapi
+        state: absent
+        update_cache: true
+      when: mockapi is not undefined and not mockapi
 
 - hosts: ipaclient
   become: true

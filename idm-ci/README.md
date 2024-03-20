@@ -2,8 +2,8 @@
 
 ## Supported OS
 
-- rhel-8.8
-- rhel-9.2
+- rhel-8.8+
+- rhel-9.2+
 
 RHEL 8.7 / 9.1 and older do not support `ipa-client-install` with PKINIT.
 Kerberos KDC on RHEL 8.6 server uses SHA-1 for PKINIT, which is
@@ -33,6 +33,11 @@ number. Contact RH customer support to add an EBS number to an account.
   entitlements.
 - Create activation key at https://access.stage.redhat.com/management/activation_keys
 - Create RHSM API token at https://access.stage.redhat.com/management/api
+
+Stage has two configuration flavors:
+
+- "stage" uses Stage Console for idmsvc API
+- "stack-mockapi" uses mockapi for idmsvc API
 
 ## idm-ci Quay container
 
