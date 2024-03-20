@@ -324,3 +324,26 @@ the server and then running `./install_server.sh` on the server.
   package show `HCC organization id`, `HCC subscription id`, and
   `RHSM certificate subject` with same values as the RHSM cert. The
   subject string does not contain spaces.
+
+
+## Release process
+
+1. Bump `VERSION` in `Makefile`, e.g. `VERSION = 0.99`
+2. Run `make version` to update `VERSION` in other files. It should modify
+   `pyproject.toml`, `setup.cfg`, and four `.py` files.
+3. Commit the changes, e.g. `git commit --signoff -m "Release 0.99"`
+4. Push the changes and merge them into `main`
+5. Pull the release commit into your local checkout.
+   > **IMPORTANT:** Your clone must be on `main` branch and the tip of your
+       local `main` branch must be the release commit. Otherwise `rpkg` may
+       not work as expected.
+6. Create a release tag with `rpkg tag --version 0.99`. Adjust the text
+   before you close your `$EDITOR`. The text will be used in RPM changelog.
+   This will create a tag like `ipa-hcc-0.99-1`.
+7. Verify the tag with `git tag -v ipa-hcc-0.99-1`. The `Commits:` range
+   should end at the current release commit.
+8. Push the tag to upstream repo
+  `git push upstream refs/tags/ipa-hcc-0.99-1`. This will trigger a COPR
+   build, too.
+9. On [GitHub](https://github.com/podengo-project/ipa-hcc/tags), turn the
+   tag into a release.

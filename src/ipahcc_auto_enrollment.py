@@ -39,7 +39,7 @@ from ipapython.version import VENDOR_VERSION as IPA_VERSION
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
-VERSION = "0.14"
+VERSION = "0.15"
 
 # copied from ipahcc.hccplatform
 DEVELOPMENT_MODE = True

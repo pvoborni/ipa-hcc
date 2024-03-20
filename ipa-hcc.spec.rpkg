@@ -112,7 +112,7 @@ An extension for IPA integration with Red Hat Hybrid Cloud Console.
 
 %if %{with server}
 %package server
-Summary: Server plugin for IPA Hybrid Cloud Console extension
+Summary: IPA server plugin for Hybrid Cloud Console integration
 BuildArch: noarch
 
 %py_provides python3-ipahcc
@@ -131,8 +131,10 @@ Requires(post): selinux-policy
 %{?systemd_requires}
 
 %description server
-This package contains server plugins and WebUI for IPA Hybrid Cloud Console
-extension.
+This package contains IPA server plugins, LDAP schema extension, WebUI
+extension, and registration agent for Hybrid Cloud Console integration. The
+extensions require an account on https://console.redhat.com/ and registration
+with subscription manager.
 
 %posttrans server
 %{python3} -c "import sys; from ipaserver.install import installutils; sys.exit(0 if installutils.is_ipa_configured() else 1);" > /dev/null 2>&1
@@ -271,7 +273,8 @@ Recommends: insights-client
 %{?systemd_requires}
 
 %description client
-This package contains the automatic enrollment service for IPA clients.
+This package contains the automatic enrollment service for IPA clients
+(domain join on launch).
 
 %post client
 %systemd_post ipa-hcc-auto-enrollment.service

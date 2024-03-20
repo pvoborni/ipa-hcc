@@ -17,7 +17,7 @@ import shutil
 import subprocess
 
 # version is updated by Makefile
-VERSION = "0.14"
+VERSION = "0.15"
 
 RHSM_CONF = pathlib.Path("/etc/rhsm/rhsm.conf")
 RHSM_SERVER_HOSTNAME = "subscription.rhsm.{suffix}"

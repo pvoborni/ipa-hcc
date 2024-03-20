@@ -21,7 +21,7 @@ from ipapython.version import VENDOR_VERSION as IPA_VERSION
 logger = logging.getLogger(__name__)
 
 # version is updated by Makefile
-VERSION = "0.14"
+VERSION = "0.15"
 
 # common HTTP request headers
 HTTP_HEADERS = {
