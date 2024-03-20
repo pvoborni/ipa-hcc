@@ -134,8 +134,8 @@ $(FEDORABUILDDIR)/ipa-hcc.spec: $(SPECDIR)/ipa-hcc.spec
 	@mkdir -p $(dir $@)
 	sed \
 		-e s'|^VCS:.*||' \
-		-e s'|^Version:.*|Version:\t\t$(VERSION)|' \
-		-e 's|^Source:.*|Source:\t\thttps://github.com/podengo-project/ipa-hcc/archive/refs/tags/ipa-hcc-%{version}-1.tar.gz|' \
+		-e s'|^Version:.*|Version:        $(VERSION)|' \
+		-e 's|^Source:.*|Source:         https://github.com/podengo-project/ipa-hcc/archive/refs/tags/ipa-hcc-%{version}-1.tar.gz|' \
 		-e 's|^%setup.*|%autosetup -n ipa-hcc-ipa-hcc-%{version}-1|' \
 		$< > $@
 
@@ -153,7 +153,10 @@ fedorabuild: $(FEDORABUILDDIR)/ipa-hcc.spec
 		$(foreach cond,$(RPM_WITH),--with $(cond)) \
 		$(foreach cond,$(RPM_WITHOUT),--without $(cond)) \
 		-ba $<
-	find $(FEDORABUILDDIR) -name '*.rpm'
+	rpmlint --ignore-unused-rpmlintrc --strict -r ipa-hcc.rpmlintrc $(FEDORA_RPMDIRS)
+	find $(FEDORABUILDDIR) -name '*.rpm' -printf '%f\n'
+	rpm -qR ./build/fedora/RPMS/noarch/*.rpm | sort -u
+	rpmdeplint check-sat --repos-from-system $(FEDORABUILDDIR)/RPMS/noarch/ipa-hcc-server-*.rpm
 
 .PHONY: test
 test:
