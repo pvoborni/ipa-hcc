@@ -1,10 +1,10 @@
 import json
 import os
-import ssl
 import unittest
 from email.message import Message
 from unittest import mock
 from urllib.error import HTTPError
+from urllib.request import OpenerDirector
 
 from dns.rdtypes.IN.SRV import SRV
 from ipaplatform.paths import paths
@@ -65,6 +65,12 @@ class TestAutoEnrollmentNoMock(unittest.TestCase):
             hccplatform.HTTP_HEADERS, auto_enrollment.HTTP_HEADERS
         )
 
+    def test_schema(self):
+        schema.validate_schema(HOST_CONF_REQUEST, "HostConfRequest")
+        schema.validate_schema(HOST_CONF_RESPONSE, "HostConfResponse")
+        schema.validate_schema(REGISTER_REQUEST, "HostRegisterRequest")
+        schema.validate_schema(REGISTER_RESPONSE, "HostRegisterResponse")
+
 
 class TestAutoEnrollment(conftest.IPABaseTests):
     def setUp(self):
@@ -86,7 +92,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.m_run = p.start()
         self.addCleanup(p.stop)
 
-        p = mock.patch.object(auto_enrollment, "urlopen")
+        p = mock.patch.object(OpenerDirector, "open")
         self.m_urlopen = p.start()
         # hcc_host_conf, hcc_register
         self.m_urlopen.side_effect = [
@@ -105,12 +111,6 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         p = mock.patch("time.sleep")
         p.start()
         self.addCleanup(p.stop)
-
-    def test_schema(self):
-        schema.validate_schema(HOST_CONF_REQUEST, "HostConfRequest")
-        schema.validate_schema(HOST_CONF_RESPONSE, "HostConfResponse")
-        schema.validate_schema(REGISTER_REQUEST, "HostRegisterRequest")
-        schema.validate_schema(REGISTER_RESPONSE, "HostRegisterResponse")
 
     def parse_args(self, *args):
         # hostname is required because some test machines don't have a FQDN
@@ -296,10 +296,6 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 req.get_header("Content-type"), "application/json"
             )
             self.assertEqual(urlopen.call_args[1]["timeout"], ae.args.timeout)
-            self.assertEqual(
-                urlopen.call_args[1]["context"].verify_mode,
-                ssl.CERT_REQUIRED,
-            )
             self.assertEqual(ae.domain, conftest.DOMAIN)
             self.assertEqual(ae.domain_id, conftest.DOMAIN_ID)
             self.assertEqual(ae.realm, conftest.REALM)

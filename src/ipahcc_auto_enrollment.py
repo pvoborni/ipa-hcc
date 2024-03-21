@@ -24,8 +24,8 @@ import sys
 import tempfile
 import time
 import typing
+import urllib.request
 import uuid
-from urllib.request import HTTPError, Request, urlopen
 
 from dns.exception import DNSException
 from ipalib import constants, util, x509
@@ -176,6 +176,13 @@ parser.add_argument(
     ),
     default=DEFAULT_IDMSVC_API_URL,
 )
+# --console-proxy sets HTTPS proxy for requests to Console endpoints.
+# Requests to IPA endpoints use system settings (usually no proxy).
+parser.add_argument(
+    "--console-proxy",
+    help="HTTP proxy for Console API",
+    default=None,
+)
 
 group = parser.add_argument_group("domain filter")
 # location, domain_name, domain_id
@@ -288,7 +295,7 @@ class AutoEnrollment:
             shutil.rmtree(self.tmpdir)
             self.tmpdir = None
 
-    def _ephemeral_config(self, req: Request) -> None:
+    def _ephemeral_config(self, req: urllib.request.Request) -> None:
         """Configure for Ephemeral environment"""
         logger.info("Configure urlopen for ephemeral basic auth")
         # HTTPBasicAuthHandler is a mess, manually create auth header
@@ -345,6 +352,7 @@ class AutoEnrollment:
         body: typing.Optional[dict] = None,
         verify: bool = True,
         cafile: typing.Optional[str] = None,
+        proxy: typing.Optional[str] = None,
     ) -> dict:
         headers = {
             "Accept": "application/json",
@@ -353,13 +361,13 @@ class AutoEnrollment:
         headers.update(HTTP_HEADERS)
         if body is None:
             logger.debug("GET request %s: %s", url, body)
-            req = Request(url, headers=headers)
+            req = urllib.request.Request(url, headers=headers)
             assert req.get_method() == "GET"
         else:
             logger.debug("POST request %s: %s", url, body)
             data = json.dumps(body).encode("utf-8")
             # Requests with data are always POST requests.
-            req = Request(url, data=data, headers=headers)
+            req = urllib.request.Request(url, data=data, headers=headers)
             assert req.get_method() == "POST"
 
         context = ssl.create_default_context(cafile=cafile)
@@ -376,14 +384,21 @@ class AutoEnrollment:
         if DEVELOPMENT_MODE and self.args.dev_username:
             self._ephemeral_config(req)
 
+        # build URL opener with custom handlers
+        handlers: typing.List[urllib.request.BaseHandler]
+        handlers = [urllib.request.HTTPSHandler(context=context)]
+        if proxy:
+            logger.info("Using proxy %s for request to %s", proxy, url)
+            handlers.append(urllib.request.ProxyHandler({"https": proxy}))
+        opener = urllib.request.build_opener(*handlers)
+
         try:
-            with urlopen(  # noqa: S310
+            with opener.open(  # noqa: S310
                 req,
                 timeout=self.args.timeout,
-                context=context,
             ) as resp:  # nosec
                 j = json.load(resp)
-        except HTTPError as e:
+        except urllib.request.HTTPError as e:
             logger.error(
                 "HTTPError %s: %s (%s %s)",
                 e.code,
@@ -569,7 +584,12 @@ class AutoEnrollment:
         sleep_dur = 10  # sleep for 10, 20, 40, ...
         for _i in range(5):
             try:
-                j = self._do_json_request(url, cafile=cafile)
+                j = self._do_json_request(
+                    url,
+                    verify=True,
+                    cafile=cafile,
+                    proxy=self.args.console_proxy,
+                )
             except Exception:  # pylint: disable=broad-exception-caught
                 logger.exception(
                     "Failed to request host details from %s", url
@@ -686,7 +706,12 @@ class AutoEnrollment:
             "Getting host configuration from %s (secure: %s).", url, verify
         )
         try:
-            j = self._do_json_request(url, body=body, verify=verify)
+            j = self._do_json_request(
+                url,
+                body=body,
+                verify=verify,
+                proxy=self.args.console_proxy,
+            )
         except Exception:
             logger.error("Failed to get host configuration from %s", url)
             raise SystemExit(2) from None
@@ -750,7 +775,11 @@ class AutoEnrollment:
         logger.info("Registering host at %s", url)
         try:
             j = self._do_json_request(
-                url, body=body, verify=True, cafile=self.ipa_cacert
+                url,
+                body=body,
+                verify=True,
+                cafile=self.ipa_cacert,
+                proxy=None,  # don't use console proxy for IPA request
             )
         except Exception:
             logger.exception("Failed to register host at %s", url)
