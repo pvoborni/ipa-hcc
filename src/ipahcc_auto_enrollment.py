@@ -36,6 +36,15 @@ from ipapython import ipautil
 from ipapython.dnsutil import query_srv
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
+try:
+    # pylint: disable=ungrouped-imports
+    from ipalib.install.dnsforwarders import detect_resolve1_resolv_conf
+except ModuleNotFoundError:
+
+    def detect_resolve1_resolv_conf() -> bool:
+        return False
+
+
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
@@ -176,29 +185,22 @@ parser.add_argument(
     ),
     default=DEFAULT_IDMSVC_API_URL,
 )
-# --console-proxy sets HTTPS proxy for requests to Console endpoints.
-# Requests to IPA endpoints use system settings (usually no proxy).
-parser.add_argument(
-    "--console-proxy",
-    help="HTTP proxy for Console API",
-    default=None,
-)
 
-group = parser.add_argument_group("domain filter")
+g_filter = parser.add_argument_group("domain filter")
 # location, domain_name, domain_id
-group.add_argument(
+g_filter.add_argument(
     "--domain-name",
     metavar="NAME",
     help="Request enrollment into domain",
     type=check_arg_domain_name,
 )
-group.add_argument(
+g_filter.add_argument(
     "--domain-id",
     metavar="UUID",
     help="Request enrollment into domain by HCC domain id",
     type=check_arg_uuid,
 )
-group.add_argument(
+g_filter.add_argument(
     "--location",
     help="Prefer servers from location",
     type=check_arg_location,
@@ -211,17 +213,21 @@ parser.set_defaults(
     dev_password=None,
     dev_org_id=None,
     dev_cert_cn=None,
+    upto=None,
+    override_ipa_server=None,
+    console_proxy=None,
+    nameservers=None,
 )
 if DEVELOPMENT_MODE:
-    group = parser.add_argument_group("Ephemeral testing")
+    g_ephemeral = parser.add_argument_group("Ephemeral environment")
     # presence of --dev-username enables Ephemeral login and fake identity
-    group.add_argument(
+    g_ephemeral.add_argument(
         "--dev-username",
         metavar="USERNAME",
         help="Ephemeral basic auth user",
         type=str,
     )
-    group.add_argument(
+    g_ephemeral.add_argument(
         "--dev-password",
         metavar="PASSWORD",
         help="Ephemeral basic auth password",
@@ -229,32 +235,50 @@ if DEVELOPMENT_MODE:
     )
     # If --dev-cert-cn is given, the RHSM cert is ignored. Otherwise the org id
     # and system CN are read from the certificate.
-    group.add_argument(
+    g_ephemeral.add_argument(
         "--dev-org-id",
         metavar="ORG_ID",
         help="Override org id for systems without RHSM cert",
         type=str,
     )
-    group.add_argument(
+    g_ephemeral.add_argument(
         "--dev-cert-cn",
         metavar="CERT_CN",
         help="Override RHSM CN for systems without RHSM cert",
         type=str,
     )
 
-# hidden arguments for internal testing
-parser.add_argument(
-    "--upto",
-    metavar="PHASE",
-    help=argparse.SUPPRESS,
-    choices=("host-conf", "register"),
-)
-parser.add_argument(
-    "--override-ipa-server",
-    metavar="SERVER",
-    help=argparse.SUPPRESS,
-    type=check_arg_hostname,
-)
+    g_testing = parser.add_argument_group("Development & Testing")
+    g_testing.add_argument(
+        "--upto",
+        metavar="PHASE",
+        choices=("host-conf", "resolveconf", "register"),
+    )
+    g_testing.add_argument(
+        "--override-ipa-server",
+        metavar="SERVER",
+        help="Override IPA server name",
+        type=check_arg_hostname,
+    )
+    # --console-proxy sets HTTPS proxy for requests to Console endpoints.
+    # Requests to IPA endpoints use system settings (usually no proxy).
+    g_testing.add_argument(
+        "--console-proxy",
+        help="HTTP proxy for Console API",
+        default=None,
+    )
+    # Reconfigure system with custom DNS server(s)
+    g_testing.add_argument(
+        "--nameserver",
+        metavar="IP",
+        help=(
+            "Override /etc/resolve.conf nameserver. The option can be "
+            "repeated up to three times."
+        ),
+        action="append",
+        dest="nameservers",
+        default=None,
+    )
 
 
 class SystemStateError(Exception):
@@ -271,6 +295,9 @@ class AutoEnrollment:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
         # initialized later
+        self.enrollment_servers: typing.Optional[
+            typing.List[typing.Dict[typing.Any, typing.Any]]
+        ] = None
         self.servers: typing.Optional[typing.List[str]] = None
         self.server: typing.Optional[str] = None
         self.domain: typing.Optional[str] = None
@@ -500,6 +527,7 @@ class AutoEnrollment:
             )
 
     def enroll_host(self) -> None:
+        logger.info("Enrolling with options: %r", self.args)
         try:
             self.check_system_state()
         except SystemStateError as e:
@@ -520,6 +548,10 @@ class AutoEnrollment:
         self.hcc_host_conf()
         self.check_upto("host-conf")
 
+        self.set_dnsresolver()
+        self.update_serverlist()
+        self.check_upto("resolveconf")
+
         # self-register host with IPA
         # TODO: check other servers if server returns 400
         self.hcc_register()
@@ -527,7 +559,9 @@ class AutoEnrollment:
 
         self.ipa_client_install()
         if self.automount_location is not None:
-            self.ipa_client_automount(self.automount_location)
+            if typing.TYPE_CHECKING:
+                assert isinstance(self.server, str)
+            self.ipa_client_automount(self.automount_location, self.server)
 
     def check_upto(self, phase) -> None:
         if self.args.upto is not None and self.args.upto == phase:
@@ -733,27 +767,66 @@ class AutoEnrollment:
         self.automount_location = j[HCC_DOMAIN_TYPE].get(
             "automount_location", None
         )
-        self.servers = self._sort_servers(
-            j[HCC_DOMAIN_TYPE]["enrollment_servers"],
-            self._lookup_dns_srv(),
-            self.args.location,
-        )
-        # TODO: use all servers
+        self.enrollment_servers = j[HCC_DOMAIN_TYPE]["enrollment_servers"]
         if typing.TYPE_CHECKING:
-            assert self.servers
-        if self.args.override_ipa_server is None:
-            self.server = self.servers[0]
-        else:
-            self.server = self.args.override_ipa_server
+            assert self.enrollment_servers
         logger.info("Domain: %s", self.domain)
         logger.info("Realm: %s", self.realm)
-        logger.info("Servers: %s", ", ".join(self.servers))
+        logger.info(
+            "Enrollment servers: %s", json.dumps(self.enrollment_servers)
+        )
         logger.info(
             "Extra install args: %s",
             # Python 3.6 has no shlex.join()
             " ".join(shlex.quote(arg) for arg in self.install_args),
         )
         return j
+
+    def set_dnsresolver(self):
+        """Configure DNS resolver (/etc.resolv.conf, NM, resolve1)"""
+        nameservers = self.args.nameservers
+        if not nameservers:
+            logger.info("No --nameserver arg, not changing DNS resolver")
+            return
+
+        resolve1_enabled = detect_resolve1_resolv_conf()
+        logger.info(
+            "Configuring DNS resolver to nameservers: %s, searchdomaine %s "
+            "(resolve1 enabled: %s)",
+            nameservers,
+            self.domain,
+            resolve1_enabled,
+        )
+        tasks.configure_dns_resolver(
+            nameservers,
+            [self.domain],
+            resolve1_enabled=resolve1_enabled,
+        )
+
+    def update_serverlist(self):
+        """Update and sort server list
+
+        The list has to be sorted after the DNS resolver is configured.
+        """
+        if typing.TYPE_CHECKING:
+            assert self.enrollment_servers
+        self.servers = self._sort_servers(
+            self.enrollment_servers,
+            self._lookup_dns_srv(),
+            self.args.location,
+        )
+        if typing.TYPE_CHECKING:
+            assert self.servers
+        logger.info(
+            "Sorted servers with SRV records for location %s: %s",
+            self.args.location,
+            ", ".join(self.servers),
+        )
+        if self.args.override_ipa_server is None:
+            self.server = self.servers[0]
+        else:
+            self.server = self.args.override_ipa_server
+        logger.info("Using server '%s' for enrollment", self.server)
 
     def hcc_register(self) -> dict:
         """Register this host with /hcc API endpoint
@@ -814,7 +887,7 @@ class AutoEnrollment:
 
         return self._run(cmd)
 
-    def ipa_client_automount(self, location: str) -> None:
+    def ipa_client_automount(self, location: str, server: str) -> None:
         """Configure automount and SELinux boolean"""
         logger.info("Configuring automount location '%s'", location)
         cmd = [
@@ -822,6 +895,8 @@ class AutoEnrollment:
             "--unattended",
             "--location",
             location,
+            "--server",
+            server,
         ]
         self._run(cmd)
         logger.info("Enabling SELinux boolean for home directory on NFS")

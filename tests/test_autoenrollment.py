@@ -299,6 +299,9 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             self.assertEqual(ae.domain, conftest.DOMAIN)
             self.assertEqual(ae.domain_id, conftest.DOMAIN_ID)
             self.assertEqual(ae.realm, conftest.REALM)
+            self.assertEqual(ae.servers, None)
+            self.assertEqual(ae.server, None)
+            ae.update_serverlist()
             self.assertEqual(ae.servers, [conftest.SERVER_FQDN])
             self.assertEqual(ae.server, conftest.SERVER_FQDN)
 
@@ -310,6 +313,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             urlopen = self.m_urlopen
             ae.hcc_host_conf()
             self.assertEqual(urlopen.call_count, 1)
+            ae.update_serverlist()
 
             ae.hcc_register()
             self.assertEqual(urlopen.call_count, 2)
@@ -381,6 +385,8 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 "--unattended",
                 "--location",
                 "default",
+                "--server",
+                conftest.SERVER_FQDN,
             ],
         )
         self.assertEqual(
