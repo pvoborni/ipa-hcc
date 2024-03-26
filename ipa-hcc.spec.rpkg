@@ -171,6 +171,7 @@ getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c
 /usr/sbin/semanage fcontext -d '/var/cache/ipa-hcc(/.*)?' 2>/dev/null || :
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/cacerts/d' /var/kerberos/krb5kdc/kdc.conf || :
+systemctl try-restart krb5kdc.service || :
 %systemd_postun ipa-hcc-update.service
 %systemd_postun ipa-hcc-update.timer
 
@@ -404,7 +405,7 @@ rm -rf %{buildroot}%{python3_sitelib}/__pycache__
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
-%dir %{_datadir}/ipa-hcc/
+%dir %{_datadir}/ipa-hcc
 %{_datadir}/ipa-hcc/cacerts
 %{_unitdir}/ipa-hcc-update.*
 %if %{with pyproject_macros}
@@ -412,29 +413,25 @@ rm -rf %{buildroot}%{python3_sitelib}/__pycache__
 %else
 %{python3_sitelib}/ipahcc*.egg-info
 %endif
-%{python3_sitelib}/ipahcc/py.typed
-%{python3_sitelib}/ipahcc/*.py
-%{python3_sitelib}/ipahcc/server/*.py
-%{python3_sitelib}/ipahcc/server/schema/*.json
-%{python3_sitelib}/ipahcc/sign/*.py
+# exclude files that are in mockapi package
+%if %{with mockapi}
+%exclude %{python3_sitelib}/ipahcc/mockapi
+%exclude %{python3_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.py
+%exclude %{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
+%endif
+%{python3_sitelib}/ipahcc
 %{python3_sitelib}/ipaserver/plugins/*.py
-%{python3_sitelib}/ipaserver/install/plugins/update_hcc.py
-%{python3_sitelib}/ipahcc/__pycache__/*.pyc
-%{python3_sitelib}/ipahcc/server/__pycache__/*.pyc
-%{python3_sitelib}/ipahcc/sign/__pycache__/*.pyc
 %{python3_sitelib}/ipaserver/plugins/__pycache__/*.pyc
-%{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc.*.pyc
+%{python3_sitelib}/ipaserver/install/plugins/*.py
+%{python3_sitelib}/ipaserver/install/plugins/__pycache__/*.pyc
+
 %{_datadir}/ipa/schema.d/85-hcc.ldif
 %{_datadir}/ipa/updates/85-hcc.update
 %{_datadir}/ipa/ui/js/plugins/*
 
 # registration service
-%attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
+# non-standard uid and gid
 %attr(0755,ipahcc,ipaapi) %dir %{_localstatedir}/cache/ipa-hcc
-%{python3_sitelib}/ipahcc/registration/*.py
-%{python3_sitelib}/ipaserver/install/plugins/update_hcc_enrollment_service.py
-%{python3_sitelib}/ipahcc/registration/__pycache__/*.pyc
-%{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_enrollment_service.*.pyc
 %{_datadir}/ipa-hcc/hcc_registration_service.py
 %{_datadir}/ipa/updates/86-hcc-registration-service.update
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc.conf
@@ -447,13 +444,14 @@ rm -rf %{buildroot}%{python3_sitelib}/__pycache__
 %files mockapi
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%{python3_sitelib}/ipahcc/mockapi/*.py
-%{python3_sitelib}/ipahcc/mockapi/__pycache__/*.pyc
+%{python3_sitelib}/ipahcc/mockapi
 %{_datadir}/ipa-hcc/hcc_mockapi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
 %{python3_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.py
 %{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
 %{_datadir}/ipa/updates/87-hcc-mockapi.update
+# non-standard ownership and permission to restrict the directory to ipahcc:root
+%attr(0750,ipahcc,root) %dir %{_sysconfdir}/ipa/hcc
 
 %files ephemeral
 %doc README.md CONTRIBUTORS.txt
