@@ -1,5 +1,4 @@
 # Arguments for ipa-hcc-auto-enrollment.service
 # see /usr/libexec/ipa-hcc/ipa-hcc-auto-enrollment --help
-# --idmsvc-api-url https://cert.console.redhat.com/api/idmsvc/v1
-# --insecure
-AUTO_ENROLLMENT_ARGS="--idmsvc-api-url https://cert.console.stage.redhat.com/api/idmsvc/v1"
+# default to verbose logging (use -vv for extra verbose)
+AUTO_ENROLLMENT_ARGS="--verbose"

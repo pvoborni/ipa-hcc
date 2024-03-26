@@ -45,6 +45,13 @@ except ModuleNotFoundError:
         return False
 
 
+get_rhsm_config: typing.Optional[typing.Callable]
+try:
+    # pylint: disable=ungrouped-imports
+    from rhsm.config import get_config_parser as get_rhsm_config
+except ImportError:
+    get_rhsm_config = None
+
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
@@ -58,10 +65,6 @@ RHSM_CONF = "/etc/rhsm/rhsm.conf"
 INSIGHTS_MACHINE_ID = "/etc/insights-client/machine-id"
 INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
 # Prod cert-api uses internal CA while stage uses a public CA
-PROD_CERT_API = "https://cert-api.access.redhat.com/r/insights/platform"
-PROD_CERT_API_CA = "/etc/rhsm/ca/redhat-uep.pem"
-STAGE_CERT_API = "https://cert.cloud.stage.redhat.com/api"
-STAGE_CERT_API_CA = None
 IPA_DEFAULT_CONF = paths.IPA_DEFAULT_CONF
 HCC_DOMAIN_TYPE = "rhel-idm"
 HTTP_HEADERS = {
@@ -77,6 +80,77 @@ HTTP_HEADERS = {
 }
 
 logger = logging.getLogger(__name__)
+
+
+class ConsoleConfig(typing.NamedTuple):
+    env: str
+    rhsm_server: str
+    # base url for inventory v1
+    inventory_cert_url: str
+    # base url for idmsvc v1
+    idmsvc_cert_url: str
+    # Prod cert-api uses internal CA while stage uses a public CA
+    cert_api_cafile: typing.Optional[str]
+
+
+PROD_CONSOLE = ConsoleConfig(
+    env="prod",
+    rhsm_server="subscription.rhsm.redhat.com",
+    inventory_cert_url="https://cert.console.redhat.com/api/inventory/v1",
+    idmsvc_cert_url="https://cert.console.redhat.com/api/idmsvc/v1",
+    cert_api_cafile="/etc/rhsm/ca/redhat-uep.pem",
+)
+
+STAGE_CONSOLE = ConsoleConfig(
+    env="stage",
+    rhsm_server="subscription.rhsm.stage.redhat.com",
+    inventory_cert_url="https://cert.console.stage.redhat.com/api/inventory/v1",
+    idmsvc_cert_url="https://cert.console.stage.redhat.com/api/idmsvc/v1",
+    cert_api_cafile=None,
+)
+
+ProxyUrl = typing.Optional[str]
+
+
+def detect_rhsm_config() -> typing.Tuple[ConsoleConfig, ProxyUrl]:
+    """Detect configuration from RHSM config"""
+    rhsm_server: str
+    proxy_url: ProxyUrl = None
+    if get_rhsm_config is not None:
+        logger.debug("Using RHSM config")
+        rhsm_config = get_rhsm_config()
+        rhsm_server = rhsm_config.get("server", "hostname").strip()
+        proxy_hostname = rhsm_config.get("server", "proxy_hostname").strip()
+        if proxy_hostname:
+            proxy_scheme = (
+                rhsm_config.get("server", "proxy_scheme").strip() or "http"
+            )
+            proxy_port = (
+                rhsm_config.get("server", "proxy_port").strip() or "3128"
+            )
+            proxy_user = rhsm_config.get("server", "proxy_user").strip()
+            proxy_password = rhsm_config.get(
+                "server", "proxy_password"
+            ).strip()
+            proxy_auth = (
+                f"{proxy_user}:{proxy_password}@" if proxy_user else ""
+            )
+            proxy_url = (
+                f"{proxy_scheme}://{proxy_auth}{proxy_hostname}:{proxy_port}"
+            )
+        logger.debug(
+            "Detected RHSM server: %s, proxy: %s", rhsm_server, proxy_url
+        )
+    else:
+        logger.debug("RHSM is not available, default to prod")
+        rhsm_server = "subscription.rhsm.redhat.com"
+
+    if rhsm_server == STAGE_CONSOLE.rhsm_server:
+        cfg = STAGE_CONSOLE
+    else:
+        cfg = PROD_CONSOLE
+    logger.info("Detected configuration %s, RHSM proxy '%s'", cfg, proxy_url)
+    return cfg, proxy_url
 
 
 def check_arg_hostname(arg: str) -> str:
@@ -176,14 +250,13 @@ parser.add_argument(
     type=int,
     default=10,
 )
-DEFAULT_IDMSVC_API_URL = "https://cert.console.redhat.com/api/idmsvc/v1"
 parser.add_argument(
     "--idmsvc-api-url",
     help=(
         "URL of Hybrid Cloud Console API with cert auth "
-        f"(default: {DEFAULT_IDMSVC_API_URL})"
+        "(default: detect from RHSM config)"
     ),
-    default=DEFAULT_IDMSVC_API_URL,
+    default=None,
 )
 
 g_filter = parser.add_argument_group("domain filter")
@@ -264,7 +337,7 @@ if DEVELOPMENT_MODE:
     # Requests to IPA endpoints use system settings (usually no proxy).
     g_testing.add_argument(
         "--console-proxy",
-        help="HTTP proxy for Console API",
+        help="HTTP proxy for Console API (default: detect from RHSM config)",
         default=None,
     )
     # Reconfigure system with custom DNS server(s)
@@ -308,6 +381,7 @@ class AutoEnrollment:
         self.token: typing.Optional[str] = None
         self.install_args: typing.Iterable[str] = ()
         self.automount_location: typing.Optional[str] = None
+        self.console_config: ConsoleConfig = PROD_CONSOLE
         # internals
         self.tmpdir: typing.Optional[str] = None
 
@@ -527,7 +601,15 @@ class AutoEnrollment:
             )
 
     def enroll_host(self) -> None:
-        logger.info("Enrolling with options: %r", self.args)
+        self.console_config, proxy_url = detect_rhsm_config()
+        if self.args.console_proxy is None and proxy_url is not None:
+            logger.debug("Using console proxy from RHSM: %s", proxy_url)
+            self.args.console_proxy = proxy_url
+        if self.args.idmsvc_api_url is None:
+            logger.debug("Using default idmsvc url")
+            self.args.idmsvc_api_url = self.console_config.idmsvc_cert_url
+
+        logger.info("Enrolling with settings: %r", self.args)
         try:
             self.check_system_state()
         except SystemStateError as e:
@@ -613,7 +695,8 @@ class AutoEnrollment:
         mid = self.insights_machine_id
         if typing.TYPE_CHECKING:
             assert isinstance(mid, str)
-        url, cafile = self._get_inventory_url(mid)
+        base = self.console_config.inventory_cert_url
+        url = f"{base}/hosts?insights_id={mid}"
         time.sleep(3)  # short initial sleep
         sleep_dur = 10  # sleep for 10, 20, 40, ...
         for _i in range(5):
@@ -621,7 +704,7 @@ class AutoEnrollment:
                 j = self._do_json_request(
                     url,
                     verify=True,
-                    cafile=cafile,
+                    cafile=self.console_config.cert_api_cafile,
                     proxy=self.args.console_proxy,
                 )
             except Exception:  # pylint: disable=broad-exception-caught
@@ -639,27 +722,6 @@ class AutoEnrollment:
                 sleep_dur *= 2
         # TODO: error message
         raise RuntimeError("Unable to find machine in host inventory")
-
-    def _get_inventory_url(
-        self, insights_id: str
-    ) -> typing.Tuple[str, typing.Optional[str]]:
-        """Get Insights API url and CA (prod or stage)
-
-        Base on https://github.com/RedHatInsights/insights-core
-        /blob/insights-core-3.1.16/insights/client/auto_config.py
-        """
-        try:
-            with open(RHSM_CONF, encoding="utf-8") as f:
-                conf = f.read()
-        except OSError:
-            conf = ""
-        if "subscription.rhsm.stage.redhat.com" in conf:
-            base = STAGE_CERT_API
-            cafile = STAGE_CERT_API_CA
-        else:
-            base = PROD_CERT_API
-            cafile = PROD_CERT_API_CA
-        return f"{base}/inventory/v1/hosts?insights_id={insights_id}", cafile
 
     def _lookup_dns_srv(self) -> typing.List[str]:
         """Lookup IPA servers via LDAP SRV records
@@ -909,9 +971,7 @@ def main(args=None):
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(levelname)s: %(message)s",
     )
-
-    if not args.idmsvc_api_url:
-        parser.error("--idmsvc-api-url required\n")
+    logger.info("Arguments: %s", sys.argv[1:])
 
     with AutoEnrollment(args) as autoenrollment:
         autoenrollment.enroll_host()

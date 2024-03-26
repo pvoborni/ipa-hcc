@@ -1,5 +1,7 @@
+import configparser
 import json
 import os
+import textwrap
 import unittest
 from email.message import Message
 from unittest import mock
@@ -49,6 +51,21 @@ REGISTER_RESPONSE = {"status": "ok", "kdc_cabundle": conftest.KDC_CA_DATA}
 
 IDMSVC_API_URL = f"https://{conftest.SERVER_FQDN}/api/idmsvc/v1"
 
+RHSM_CONFIG = configparser.ConfigParser()
+RHSM_CONFIG.read_string(
+    textwrap.dedent(
+        """
+        [server]
+        hostname=subscription.rhsm.redhat.com
+        proxy_hostname=
+        proxy_scheme=http
+        proxy_port=
+        proxy_user=
+        proxy_password=
+        """
+    )
+)
+
 
 class TestAutoEnrollmentNoMock(unittest.TestCase):
     def test_module_attributes(self):
@@ -84,6 +101,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             INSIGHTS_HOST_DETAILS=conftest.HOST_DETAILS,
             INSIGHTS_MACHINE_ID=conftest.MACHINE_ID,
             IPA_DEFAULT_CONF=conftest.NO_FILE,
+            get_rhsm_config=mock.Mock(return_value=RHSM_CONFIG),
         )
         p.start()
         self.addCleanup(p.stop)
@@ -266,7 +284,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         req = self.m_urlopen.call_args[0][0]
         self.assertEqual(
             req.get_full_url(),
-            "https://cert-api.access.redhat.com/r/insights/platform"
+            "https://cert.console.redhat.com/api"
             "/inventory/v1/hosts?insights_id=96aac268-e7b8-429a-8c86-f498b96fe1f9",
         )
         self.assertEqual(req.get_method(), "GET")

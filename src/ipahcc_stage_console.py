@@ -75,6 +75,11 @@ parser.add_argument(
     action="count",
 )
 parser.add_argument(
+    "--force",
+    action="store_true",
+    help="Override ipa-hcc's and insight-client's auto-detection",
+)
+parser.add_argument(
     "--version",
     "-V",
     help="Show version number and exit",
@@ -187,8 +192,11 @@ def main(args=None):
     )
     configure_rhsm(args.suffix, args.proxy)
     configure_rhc(args.suffix, args.proxy)
-    configure_insights_client(args.suffix, args.proxy)
-    configure_ipahcc_auto_enrollment(args.suffix, args.proxy)
+    if args.force:
+        configure_insights_client(args.suffix, args.proxy)
+        configure_ipahcc_auto_enrollment(args.suffix, args.proxy)
+    else:
+        logger.info("Use insight-client's and ipa-hcc's auto detection")
 
 
 if __name__ == "__main__":
