@@ -18,7 +18,7 @@ import subprocess
 from urllib.parse import urlparse
 
 # version is updated by Makefile
-VERSION = "0.15"
+VERSION = "0.16"
 
 RHSM_CONF_FILE = pathlib.Path("/etc/rhsm/rhsm.conf")
 RHSM_SERVER_HOSTNAME = "subscription.rhsm.{suffix}"

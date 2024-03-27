@@ -55,7 +55,7 @@ except ImportError:
 FQDN = socket.gethostname()
 
 # version is updated by Makefile
-VERSION = "0.15"
+VERSION = "0.16"
 
 # copied from ipahcc.hccplatform
 DEVELOPMENT_MODE = True
