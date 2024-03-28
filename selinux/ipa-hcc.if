@@ -1,0 +1,43 @@
+## <summary>Policy for IPA-HCC.</summary>
+
+########################################
+## <summary>
+##	Allow the specified domain to read
+##	ipa-hcc cache files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`ipa_hcc_read_cache',`
+	gen_require(`
+		type ipa_hcc_cache_t;
+	')
+
+	allow $1 ipa_hcc_cache_t:dir list_dir_perms;
+	read_files_pattern($1, ipa_hcc_cache_t, ipa_hcc_cache_t)
+	read_lnk_files_pattern($1, ipa_hcc_cache_t, ipa_hcc_cache_t)
+')
+
+########################################
+## <summary>
+##	Allow the specified domain to write to
+##	ipa-hcc cache files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`ipa_hcc_write_cache',`
+	gen_require(`
+		type ipa_hcc_cache_t;
+	')
+
+	allow $1 ipa_hcc_cache_t:file write;
+')

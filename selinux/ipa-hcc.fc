@@ -1,0 +1,3 @@
+# /var/cache/ipa-hcc/ contains caches used by registration service, which is
+# a mod_wsgi application in Apache HTTPd.
+/var/cache/ipa-hcc(/.*)?        gen_context(system_u:object_r:ipa_hcc_cache_t,s0)

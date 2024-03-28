@@ -16,6 +16,10 @@ __pycache__
 /refresh_token
 /ipa-hcc.spec
 
+/selinux/tmp
+*.pp
+*.pp.bz2
+
 /contrib/ci-image/requirements.txt
 /contrib/ci-image/ipa-hcc.spec
 /contrib/1minutetip/artifacts/

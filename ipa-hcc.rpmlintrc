@@ -3,6 +3,10 @@ addFilter('non-standard-uid .* ipahcc')
 addFilter('non-standard-gid .* ipaapi')
 addFilter('non-standard-dir-perm /etc/ipa/hcc 750')
 
+# SELinux policy macros
+addFilter('ipa-hcc-selinux.noarch: E: dangerous-command-in-%pre cp')
+addFilter('ipa-hcc-selinux.noarch: E: dangerous-command-in-%posttrans rm')
+
 # auto-generated source file
 addFilter('invalid-url Source0')
 

@@ -28,6 +28,8 @@ MANDIR:= $(shell rpm --eval '%{_mandir}')
 SHAREDSTATEDIR := $(shell rpm --eval '%{_sharedstatedir}')
 # /var
 LOCALSTATEDIR := $(shell rpm --eval '%{_localstatedir}')
+# default SELinux type
+SELINUXTYPE ?= targeted
 
 INSTALL = install
 INSTALL_DATAFILE = $(INSTALL) -d -m644
@@ -49,7 +51,7 @@ OPENAPI_YAML = api/public.openapi.yaml
 VENV = .venv
 
 .PHONY: all
-all: test rehash lint version $(VENV)
+all: test rehash lint version $(VENV) selinuxpolicy
 
 .PHONY: clean-idm-ci
 clean-idm-ci:
@@ -57,8 +59,13 @@ clean-idm-ci:
 	rm -f mrack.* runner.log
 	rm -f host-info.txt
 
+.PHONY: clean-selinux
+clean-selinux:
+	rm -f selinux/*.pp rm -f selinux/*.pp.bz2
+	rm -rf selinux/tmp
+
 .PHONY: clean
-clean:
+clean: clean-selinux
 	find -name __pycache__ | xargs rm -rf
 	rm -f .coverage*
 	rm -rf htmlcov
@@ -115,6 +122,23 @@ version: module_version
 		$(srcdir)/pyproject.toml
 	sed -i 's/^version\ =\ .*/version = $(VERSION)/g' \
 		$(srcdir)/setup.cfg
+
+# SELinux
+SELINUX_POLICYDIR = $(DATADIR)/selinux/packages/$(SELINUXTYPE)
+SELINUX_MAKEFILE = $(DATADIR)/selinux/devel/Makefile
+SELINUX_MODULENAME = ipa-hcc
+
+selinux/$(SELINUX_MODULENAME).pp.bz2:
+
+selinux/%.pp.bz2: selinux/%.pp
+	bzip2 -f -9 $^
+
+selinux/%.pp: selinux/%.te selinux/%.fc selinux/%.if
+	@# SELinux Makefile assumes that policy files are in CURDIR
+	make -C selinux -f $(SELINUX_MAKEFILE) $(nodir $@)
+
+.PHONY: selinuxpolicy
+selinuxpolicy: selinux/$(SELINUX_MODULENAME).pp.bz2
 
 .PHONY: rpkg
 rpkg: $(OPENAPI_YAML)
@@ -292,8 +316,13 @@ install_mockapi:
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates
 	$(CP_PD) $(srcdir)/install/mockapi/updates/87-hcc-mockapi.update $(DEST)$(DATADIR)/ipa/updates/
 
+.PHONY: install_selinux
+install_selinux: selinux/$(SELINUX_MODULENAME).pp.bz2
+	$(MKDIR_P) $(DEST)$(SELINUX_POLICYDIR)
+	$(CP_PD) $< $(DEST)$(SELINUX_POLICYDIR)
+
 .PHONY: install_server
-install_server: install_server_plugin install_registration_service
+install_server: install_server_plugin install_registration_service install_selinux
 
 .PHONY: install
 install: install_python install_client install_server

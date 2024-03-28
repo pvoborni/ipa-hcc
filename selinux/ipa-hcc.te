@@ -1,0 +1,32 @@
+policy_module(ipa-hcc, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+type ipa_hcc_cache_t;
+files_type(ipa_hcc_cache_t)
+
+########################################
+#
+# Policies
+#
+
+# allow mod_wsgi apps to read and write cache
+optional_policy(`
+    gen_require(` #selint-disable:S-001
+        type httpd_t;
+    ')
+    ipa_hcc_read_cache(httpd_t)
+    ipa_hcc_write_cache(httpd_t)
+')
+
+# allow registration agent to read /etc/rhsm/rhsm.conf
+# to auto-detect Console URLs.
+optional_policy(`
+    gen_require(` #selint-disable:S-001
+        type httpd_t;
+    ')
+    rhsmcertd_read_config_files(httpd_t)
+')
