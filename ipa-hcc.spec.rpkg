@@ -74,7 +74,8 @@ BuildRequires: python3-devel
 %if %{with pyproject_macros}
 BuildRequires: pyproject-rpm-macros
 %endif
-%if %{with server}
+# RHEL 8 buildroot does not have idm:DL1 module
+%if %{with server} && 0%{?rhel} != 8
 BuildRequires: python3-ipaserver >= %{ipa_version}
 %else
 BuildRequires: python3-ipaclient >= %{ipa_version}
