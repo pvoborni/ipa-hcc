@@ -117,6 +117,10 @@ class JSONWSGIApp:
         self.routes = self._get_routes()
         self._cache: typing.Dict[str, typing.Any] = {}
 
+    @property
+    def config(self) -> hccplatform.HCCConfig:
+        return self.hccapi.config
+
     def _get_routes(self) -> typing.List[typing.Tuple["re.Pattern", dict]]:
         """Inspect class and get a list of routes"""
         routes: typing.Dict[str, dict] = {}
@@ -222,7 +226,7 @@ class JSONWSGIApp:
         """Before handle method call hook"""
         # check for modified hcc.conf in development mode
         if hccplatform.DEVELOPMENT_MODE:
-            hccplatform.CONFIG.refresh_config()
+            self.config.refresh_config()
 
     def after_call(self) -> None:
         """After handle method call hook"""

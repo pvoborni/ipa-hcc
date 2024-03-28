@@ -161,8 +161,8 @@ class IPABaseTests(unittest.TestCase):
         )
 
     def mock_hccplatform(self):
-        cfg = mock.Mock(spec=hccplatform.CONFIG)
-        cfg.configure_mock(
+        cfgcls = mock.create_autospec(hccplatform.HCCConfig)
+        cfgcls().configure_mock(
             idmsvc_api_url="http://invalid.test",
             token_url="http://invalid.test",  # noqa: S106
             inventory_api_url="http://invalid.test",
@@ -171,6 +171,8 @@ class IPABaseTests(unittest.TestCase):
             dev_username=None,
             dev_password=None,
         )
+        detect_rhsm_config = mock.Mock()
+        detect_rhsm_config.return_value = hccplatform.PROD_CONSOLE, None
 
         p = mock.patch.multiple(
             "ipahcc.hccplatform",
@@ -179,7 +181,8 @@ class IPABaseTests(unittest.TestCase):
             INSIGHTS_HOST_DETAILS=HOST_DETAILS,
             HCC_CACERTS_DIR=KDC_CA_DIR,
             HCC_ENROLLMENT_AGENT_KEYTAB=NO_FILE,
-            CONFIG=cfg,
+            HCCConfig=cfgcls,
+            detect_rhsm_config=detect_rhsm_config,
         )
         p.start()
         self.addCleanup(p.stop)

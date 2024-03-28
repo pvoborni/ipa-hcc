@@ -3,21 +3,21 @@
 
 [hcc]
 {% if hmsidm_config.rhc_env == 'stage' %}
-## Console stage with console API
-token_url=https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
-inventory_api_url=https://console.stage.redhat.com/api/inventory/v1
-idmsvc_api_url=https://cert.console.stage.redhat.com/api/idmsvc/v1
+## Console stage with console API (auto-detect from rhsm.conf)
+#token_url=https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+#inventory_api_url=https://console.stage.redhat.com/api/inventory/v1
+#idmsvc_api_url=https://cert.console.stage.redhat.com/api/idmsvc/v1
 {% elif hmsidm_config.rhc_env == 'stage-mockapi' %}
-## Console stage with mockapi
-token_url=https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
-inventory_api_url=https://console.stage.redhat.com/api/inventory/v1
+## Console stage with mockapi (partly auto-detected)
+#token_url=https://sso.stage.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+#inventory_api_url=https://console.stage.redhat.com/api/inventory/v1
 # mockapi
 idmsvc_api_url=https://{{ meta_fqdn }}/api/idmsvc/v1
 {% elif hmsidm_config.rhc_env == 'prod' %}
-## Console prod with console API
-token_url=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
-inventory_api_url=https://console.redhat.com/api/inventory/v1
-idmsvc_api_url=https://cert.console.redhat.com/api/idmsvc/v1
+## Console prod with console API (auto-detect from rhsm.conf)
+#token_url=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+#inventory_api_url=https://console.redhat.com/api/inventory/v1
+#idmsvc_api_url=https://cert.console.redhat.com/api/idmsvc/v1
 {% elif hmsidm_config.rhc_env == 'ephemeral' %}
 ## Ephemeral testing environment
 token_url=https://sso.invalid/auth/realms/redhat-external/protocol/openid-connect/token

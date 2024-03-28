@@ -33,6 +33,7 @@ phases:
       - playbook: prep/prefer-ipv4.yaml
       - playbook: prep/redhat-base.yaml
       - playbook: prep/repos.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-configure.yaml
       - playbook: prep/install-ipa-packages.yaml
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml

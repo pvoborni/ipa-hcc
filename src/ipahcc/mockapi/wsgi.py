@@ -82,7 +82,7 @@ class Application(JSONWSGIApp):
             "client_id": hccplatform.TOKEN_CLIENT_ID,
             "refresh_token": refresh_token,
         }
-        url = hccplatform.CONFIG.token_url
+        url = self.config.token_url
         start = monotonic_time()
         resp = self.session.post(url, data)
         dur = monotonic_time() - start
@@ -112,7 +112,7 @@ class Application(JSONWSGIApp):
         """
         # cannot lookup from .../hosts/{inventory_id}, RHEL 7 does not include
         # subscription_manager_id in return value.
-        url = "/".join((hccplatform.CONFIG.inventory_api_url.rstrip("/"), "hosts"))
+        url = "/".join((self.config.inventory_api_url.rstrip("/"), "hosts"))
         logger.debug(
             "Looking up inventory id %s / rhsm %s in console inventory %s",
             inventory_id,
@@ -372,9 +372,9 @@ class Application(JSONWSGIApp):
         """
         result = {
             "domain": self.api.env.domain,
-            "idmsvc_api_url": hccplatform.CONFIG.idmsvc_api_url,
+            "idmsvc_api_url": self.config.idmsvc_api_url,
         }
-        if hccplatform.CONFIG.dev_username:
-            result["dev_username"] = hccplatform.CONFIG.dev_username
-            result["dev_password"] = hccplatform.CONFIG.dev_password
+        if self.config.dev_username:
+            result["dev_username"] = self.config.dev_username
+            result["dev_password"] = self.config.dev_password
         return result

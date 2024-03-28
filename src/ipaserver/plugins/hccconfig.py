@@ -166,8 +166,8 @@ i18n_messages.messages["hccconfig"] = {
 }
 
 # hcc_inventory_url is used by browser UI to generate a link to HBI.
-# This value is not refreshed when hccplatform.CONFIG is reloaded.
-inventory_url = urlparse(hccplatform.CONFIG.inventory_api_url)
+# This value is not refreshed when hccplatform.HCCConfig is reloaded.
+inventory_url = urlparse(hccplatform.HCCConfig().inventory_api_url)
 
 # pylint: disable=protected-access
 api.env._Env__d.update(

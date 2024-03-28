@@ -89,8 +89,6 @@ class ConsoleConfig(typing.NamedTuple):
     inventory_cert_url: str
     # base url for idmsvc v1
     idmsvc_cert_url: str
-    # Prod cert-api uses internal CA while stage uses a public CA
-    cert_api_cafile: typing.Optional[str]
 
 
 PROD_CONSOLE = ConsoleConfig(
@@ -98,7 +96,6 @@ PROD_CONSOLE = ConsoleConfig(
     rhsm_server="subscription.rhsm.redhat.com",
     inventory_cert_url="https://cert.console.redhat.com/api/inventory/v1",
     idmsvc_cert_url="https://cert.console.redhat.com/api/idmsvc/v1",
-    cert_api_cafile="/etc/rhsm/ca/redhat-uep.pem",
 )
 
 STAGE_CONSOLE = ConsoleConfig(
@@ -106,7 +103,6 @@ STAGE_CONSOLE = ConsoleConfig(
     rhsm_server="subscription.rhsm.stage.redhat.com",
     inventory_cert_url="https://cert.console.stage.redhat.com/api/inventory/v1",
     idmsvc_cert_url="https://cert.console.stage.redhat.com/api/idmsvc/v1",
-    cert_api_cafile=None,
 )
 
 ProxyUrl = typing.Optional[str]
@@ -118,26 +114,16 @@ def detect_rhsm_config() -> typing.Tuple[ConsoleConfig, ProxyUrl]:
     proxy_url: ProxyUrl = None
     if get_rhsm_config is not None:
         logger.debug("Using RHSM config")
-        rhsm_config = get_rhsm_config()
-        rhsm_server = rhsm_config.get("server", "hostname").strip()
-        proxy_hostname = rhsm_config.get("server", "proxy_hostname").strip()
-        if proxy_hostname:
-            proxy_scheme = (
-                rhsm_config.get("server", "proxy_scheme").strip() or "http"
-            )
-            proxy_port = (
-                rhsm_config.get("server", "proxy_port").strip() or "3128"
-            )
-            proxy_user = rhsm_config.get("server", "proxy_user").strip()
-            proxy_password = rhsm_config.get(
-                "server", "proxy_password"
-            ).strip()
-            proxy_auth = (
-                f"{proxy_user}:{proxy_password}@" if proxy_user else ""
-            )
-            proxy_url = (
-                f"{proxy_scheme}://{proxy_auth}{proxy_hostname}:{proxy_port}"
-            )
+        rc = get_rhsm_config()
+        rhsm_server = rc.get("server", "hostname").strip()
+        phost = rc.get("server", "proxy_hostname").strip()
+        if phost:
+            pscheme = rc.get("server", "proxy_scheme").strip() or "http"
+            pport = rc.get("server", "proxy_port").strip() or "3128"
+            puser = rc.get("server", "proxy_user").strip()
+            ppassword = rc.get("server", "proxy_password").strip()
+            proxy_auth = f"{puser}:{ppassword}@" if puser else ""
+            proxy_url = f"{pscheme}://{proxy_auth}{phost}:{pport}"
         logger.debug(
             "Detected RHSM server: %s, proxy: %s", rhsm_server, proxy_url
         )
@@ -704,7 +690,6 @@ class AutoEnrollment:
                 j = self._do_json_request(
                     url,
                     verify=True,
-                    cafile=self.console_config.cert_api_cafile,
                     proxy=self.args.console_proxy,
                 )
             except Exception:  # pylint: disable=broad-exception-caught

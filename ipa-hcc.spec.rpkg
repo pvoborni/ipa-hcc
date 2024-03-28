@@ -277,6 +277,7 @@ BuildArch: noarch
 Requires: %{ipa_name}-client >= %{ipa_version}
 # ipa-client RHEL 8.7, 9.1, and ealier, do not come with pkinit
 Requires: krb5-pkinit-openssl
+Requires: python3-subscription-manager-rhsm
 Recommends: subscription-manager
 %if 0%{?rhel}
 # Recommend remote host configuration and Insights client on RHEL

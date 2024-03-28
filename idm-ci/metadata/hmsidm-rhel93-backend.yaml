@@ -48,6 +48,7 @@ phases:
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-local-rpms.yaml
       - playbook: prep/prefer-ipv4.yaml
       - playbook: prep/repos.yaml
+      - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-configure.yaml
       - playbook: prep/install-ipa-packages.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/idm-domains-backend-deploy.yaml

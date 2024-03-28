@@ -3,51 +3,12 @@
   become: true
   become_method: sudo
   tasks:
+    - include_vars:
+        file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
+        name: hmsidm_config
+
     - name: Register host with RHSM and connect to Insights (rhc connect)
       block:
-        - include_vars:
-            file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
-            name: hmsidm_config
-
-        - name: Install rhc and insights-client
-          yum:
-            name:
-              - rhc
-              - insights-client
-            state: latest
-
-        - name: Configure RHSM for stage environment
-          shell: |
-            subscription-manager config \
-              --server.hostname subscription.rhsm.stage.redhat.com \
-              --rhsm.baseurl https://cdn.stage.redhat.com
-          when: hmsidm_config.rhc_env in ['stage', 'stage-mockapi']
-
-        - name: Configure /etc/rhc/config.toml broker for stage environment
-          lineinfile:
-            path: /etc/rhc/config.toml
-            regexp: '^broker\s*='
-            line: 'broker = ["wss://connect.cloud.stage.redhat.com:443"]'
-          when: hmsidm_config.rhc_env in ['stage', 'stage-mockapi']
-
-        - name: Configure /etc/rhc/config.toml data-host for stage environment
-          lineinfile:
-            path: /etc/rhc/config.toml
-            regexp: '^data-host\s*='
-            line: 'data-host = "cert.cloud.stage.redhat.com"'
-          when: hmsidm_config.rhc_env in ['stage', 'stage-mockapi']
-
-        # required on 8.8 / 9.2
-        - name: Configure /etc/insights-client/insights-client.conf base_url for stage environment
-          ini_file:
-            path: /etc/insights-client/insights-client.conf
-            section: insights-client
-            option: base_url
-            value: "cert.console.stage.redhat.com"
-            no_extra_spaces: true
-            create: false
-          when: hmsidm_config.rhc_env in ['stage', 'stage-mockapi']
-
         - name: Register host with RHC and subscription manager (RHEL 8+)
           shell: "rhc connect -o {{ hmsidm_config.rhc_org }} -a {{ hmsidm_config.rhc_key }}"
           args:

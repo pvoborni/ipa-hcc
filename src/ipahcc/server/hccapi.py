@@ -239,10 +239,14 @@ class HCCAPI:
         #     raise ValueError(
         #         "api must be an in_server and finalized API object"
         #     )
-
         self.api = api
         self.timeout = timeout
+        self.config = hccplatform.HCCConfig()
         self.session = requests.Session()
+        proxy_map = self.config.proxy_map
+        if proxy_map:
+            logger.debug("Using console proxy for %s", ", ".join(proxy_map))
+            self.session.proxies = proxy_map
 
     def __enter__(self) -> "HCCAPI":
         self.api.Backend.ldap2.connect(time_limit=self.timeout)
@@ -692,11 +696,11 @@ class HCCAPI:
         ``openssl x509 -subject -noout -in /etc/pki/consumer/cert.pem``
         """
         if (
-            hccplatform.CONFIG.dev_org_id is not None
-            and hccplatform.CONFIG.dev_cert_cn is not None
+            self.config.dev_org_id is not None
+            and self.config.dev_cert_cn is not None
         ):
-            org_id = hccplatform.CONFIG.dev_org_id
-            cn = hccplatform.CONFIG.dev_cert_cn
+            org_id = self.config.dev_org_id
+            cn = self.config.dev_cert_cn
             source = hccplatform.HCC_CONFIG
 
         else:
@@ -742,24 +746,21 @@ class HCCAPI:
         payload: typing.Optional[typing.Dict[str, typing.Any]] = None,
         extra_headers=None,
     ) -> requests.Response:
-        api_url = hccplatform.CONFIG.idmsvc_api_url.rstrip("/")
+        api_url = self.config.idmsvc_api_url.rstrip("/")
         url = "/".join((api_url,) + subpath)
         headers = {}
         headers.update(hccplatform.HTTP_HEADERS)
         if extra_headers:
             headers.update(extra_headers)
 
-        if (
-            hccplatform.CONFIG.dev_username
-            and hccplatform.CONFIG.dev_password
-        ):
+        if self.config.dev_username and self.config.dev_password:
             logger.info(
                 "Using dev basic auth with account '%s'",
-                hccplatform.CONFIG.dev_username,
+                self.config.dev_username,
             )
             auth = requests.auth.HTTPBasicAuth(
-                hccplatform.CONFIG.dev_username,
-                hccplatform.CONFIG.dev_password,
+                self.config.dev_username,
+                self.config.dev_password,
             )
             cert = None
             headers.update(self._get_dev_headers())

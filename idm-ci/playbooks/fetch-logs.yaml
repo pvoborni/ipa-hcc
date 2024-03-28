@@ -21,6 +21,10 @@
       shell: |
         cp -a /var/lib/insights/*.json /var/log/00misc/
       ignore_errors: true
+    - name: Copy rhsm.conf
+      shell: |
+        cp -a /etc/rhsm/rhsm.conf /var/log/00misc/
+      ignore_errors: true
     - name: Archive system logs
       archive:
         path: /var/log/*

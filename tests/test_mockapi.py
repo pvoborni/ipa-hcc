@@ -206,7 +206,7 @@ class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
             response,
             {
                 "domain": conftest.DOMAIN,
-                "idmsvc_api_url": "https://console.redhat.com/api/idmsvc/v1",
+                "idmsvc_api_url": "https://cert.console.redhat.com/api/idmsvc/v1",
             },
         )
 
