@@ -19,7 +19,8 @@ from urllib.parse import parse_qs
 import gssapi
 import ipalib
 
-from ipahcc import hccplatform, sign
+from ipahcc import hccplatform
+from ipahcc.server import sign
 from ipahcc.server.hccapi import HCCAPI, APIResult
 from ipahcc.server.schema import ValidationError, validate_schema
 from ipahcc.server.util import parse_rhsm_cert

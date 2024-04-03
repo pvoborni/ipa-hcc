@@ -6,8 +6,8 @@ import uuid
 from unittest import mock
 
 import conftest
-from ipahcc import hccplatform, sign
-from ipahcc.mockapi import domain_token, wsgi
+from ipahcc import hccplatform
+from ipahcc.server import domain_token, mockapi, sign
 
 DOMAIN_REQUEST = {
     "domain_name": conftest.DOMAIN,
@@ -53,10 +53,10 @@ PUB_KEY = sign.get_public_key(PRIV_KEY)
 
 
 class TestMockAPIWSGI(conftest.IPAWSGIBaseTests):
-    wsgi_class = wsgi.Application
+    wsgi_class = mockapi.Application
 
     def setUp(self):
-        p = mock.patch.object(wsgi.Application, "_load_priv_jwk")
+        p = mock.patch.object(mockapi.Application, "_load_priv_jwk")
         self.m_load_priv_jwk = p.start()
         self.m_load_priv_jwk.return_value = PRIV_KEY
         self.addCleanup(p.stop)

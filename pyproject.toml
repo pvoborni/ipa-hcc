@@ -22,15 +22,16 @@ dependencies = [
     "netaddr < 1.0.0; python_version == '3.6'",
 ]
 
+[project.scripts]
+ipa-hcc = "ipahcc.server.cli:main"
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = [
     "ipahcc",
-    "ipahcc.mockapi",
-    "ipahcc.registration",
     "ipahcc.server",
     "ipahcc.server.schema",
-    "ipahcc.sign",
+    "ipahcc.server.sign",
     "ipaserver.install.plugins",
     "ipaserver.plugins",
 ]
@@ -61,7 +62,7 @@ source = [
 ]
 omit = [
     "/usr/*",
-    "*/ipahcc/sign/__main__.py",
+    "*/ipahcc/server/sign/__main__.py",
 ]
 
 [tool.coverage.paths]
@@ -127,7 +128,7 @@ extend-exclude = ["api/*.py"]
 # allow print in CLI scripts
 "src/ipahcc/server/cli.py" = ["T20"]
 "src/ipahcc_auto_enrollment.py" = ["T20"]
-"src/ipahcc/sign/__main__.py" = ["T20"]
+"src/ipahcc/server/sign/__main__.py" = ["T20"]
 
 [tool.ruff.isort]
 known-first-party = [

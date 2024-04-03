@@ -3,6 +3,7 @@ include .eslintrc.json .yamllint.yaml pylintrc tox.ini
 include Makefile
 include ipa-hcc.spec.rpkg ipa-hcc.rpmlintrc
 include install_client.sh install_server.sh
+graft selinux
 
 include src/ipahcc/server/schema/*.json
 
@@ -17,5 +18,6 @@ graft tests/data
 graft install
 
 prune idm-ci
+exclude .github
 exclude .gitlab*
 exclude contrib/

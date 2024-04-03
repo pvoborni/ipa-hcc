@@ -8,13 +8,15 @@ import logging
 
 from ipalib import errors
 
-from ipahcc import hccplatform, sign
-from ipahcc.server.framework import (
+from ipahcc import hccplatform
+
+from . import sign
+from .framework import (
     HTTPException,
     JSONWSGIApp,
     route,
 )
-from ipahcc.server.util import read_cert_dir
+from .util import read_cert_dir
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-hcc")

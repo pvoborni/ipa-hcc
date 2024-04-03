@@ -16,8 +16,6 @@ DATADIR := $(shell rpm --eval '%{_datadir}')
 PYTHON := $(shell rpm --eval '%{python3}')
 # /usr/lib/pythonX.Y/site-packages
 PYTHON_SITELIB := $(shell $(PYTHON) -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
-# /usr/sbin
-SBINDIR := $(shell rpm --eval '%{_sbindir}')
 # /usr/libexec
 LIBEXECDIR := $(shell rpm --eval '%{_libexecdir}')
 # /usr/lib/systemd/system
@@ -271,10 +269,6 @@ install_server_plugin:
 	$(CP_CONFIG) $(srcdir)/install/server/ipa/hcc.conf $(DEST)$(SYSCONFDIR)/ipa/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa/hcc
 
-	$(MKDIR_P) $(DEST)$(SBINDIR)
-	$(CP_PD) $(srcdir)/install/server/ipa-hcc $(DEST)$(SBINDIR)/
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(SBINDIR)/ipa-hcc
-	chmod 755 $(DEST)$(SBINDIR)/ipa-hcc
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc/cacerts
 	$(CP_PD) $(srcdir)/install/server/cacerts/* $(DEST)$(DATADIR)/ipa-hcc/cacerts/
 	$(MKDIR_P) $(DEST)$(UNITDIR)

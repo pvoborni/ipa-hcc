@@ -7,7 +7,7 @@ import jwcrypto.jws
 import jwcrypto.jwt
 
 import conftest
-from ipahcc import sign
+from ipahcc.server import sign
 
 
 class TestJWK(unittest.TestCase):

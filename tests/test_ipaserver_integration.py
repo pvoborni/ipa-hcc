@@ -14,7 +14,8 @@ import unittest
 from ipalib import api, errors
 from ipalib.facts import is_ipa_configured
 
-from ipahcc import hccplatform, sign
+from ipahcc import hccplatform
+from ipahcc.server import sign
 
 
 @unittest.skipUnless(is_ipa_configured(), "host is not an IPA server")

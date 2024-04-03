@@ -9,9 +9,8 @@ from ipapython import admintool
 from ipapython.dnsutil import DNSName
 
 import conftest
-from ipahcc import hccplatform, sign
-from ipahcc.mockapi import domain_token
-from ipahcc.server import hccapi
+from ipahcc import hccplatform
+from ipahcc.server import domain_token, hccapi, sign
 
 CACERT = x509.load_pem_x509_certificate(conftest.IPA_CA_DATA.encode("ascii"))
 

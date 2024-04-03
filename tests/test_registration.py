@@ -2,15 +2,15 @@ import json
 from unittest import mock
 
 import conftest
-from ipahcc import hccplatform, sign
-from ipahcc.registration import wsgi
+from ipahcc import hccplatform
+from ipahcc.server import registration, sign
 
 PRIV_KEY = sign.generate_private_key()
 PUB_KEY = sign.get_public_key(PRIV_KEY)
 
 
 class TestRegistrationWSGI(conftest.IPAWSGIBaseTests):
-    wsgi_class = wsgi.Application
+    wsgi_class = registration.Application
 
     def setUp(self):
         super().setUp()

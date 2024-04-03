@@ -22,7 +22,8 @@ from ipaserver.plugins.baseldap import (
     LDAPUpdate,
 )
 
-from ipahcc import hccplatform, sign
+from ipahcc import hccplatform
+from ipahcc.server import sign
 
 logger = logging.getLogger(__name__)
 

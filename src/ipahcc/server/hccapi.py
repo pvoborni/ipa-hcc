@@ -30,9 +30,9 @@ except ImportError:  # pragma: no cover
         raise NotImplementedError
 
 
-from ipahcc import hccplatform, sign
+from ipahcc import hccplatform
 
-from . import schema
+from . import schema, sign
 from .util import create_certinfo, parse_rhsm_cert
 
 logger = logging.getLogger(__name__)

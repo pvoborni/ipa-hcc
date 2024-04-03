@@ -10,7 +10,8 @@ import os
 
 from ipalib import Registry, Updater, errors
 
-from ipahcc import hccplatform, sign
+from ipahcc import hccplatform
+from ipahcc.server import sign
 
 logger = logging.getLogger(__name__)
 

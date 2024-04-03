@@ -358,7 +358,7 @@ touch debugfiles.list
 %check
 %if %{without mockapi}
 # tests depend on ipahcc.mockapi
-ln -s $(pwd)/src/ipahcc/mockapi %{buildroot}%{python3_sitelib}/ipahcc/mockapi
+ln -s $(pwd)/src/ipahcc/server/mockapi.py %{buildroot}%{python3_sitelib}/ipahcc/server/mockapi.py
 %endif
 
 # tests depend on ipahcc_ modules
@@ -370,7 +370,8 @@ export PYTHONPATH=%{buildroot}%{python3_sitelib}
 # cleanup after tests
 rm -rf %{buildroot}%{python3_sitelib}/ipahcc_*.py
 %if %{without mockapi}
-rm %{buildroot}%{python3_sitelib}/ipahcc/mockapi
+rm %{buildroot}%{python3_sitelib}/ipahcc/server/mockapi.py
+rm -f %{buildroot}%{python3_sitelib}/ipahcc/server/__pycache__/mockapi*.pyc
 %endif
 
 %if %{with client}
@@ -405,8 +406,10 @@ rm %{buildroot}%{python3_sitelib}/ipahcc/mockapi
 %endif
 
 %make install_server_plugin install_registration_service
+%{__mkdir_p} %{buildroot}%{_sbindir}
+mv %{buildroot}%{_bindir}/ipa-hcc %{buildroot}%{_sbindir}/ipa-hcc
 %py3_shebang_fix %{buildroot}%{_sbindir}/ipa-hcc
-mkdir -p %{buildroot}%{_sharedstatedir}/gssproxy
+%{__mkdir_p} %{buildroot}%{_sharedstatedir}/gssproxy
 touch %{buildroot}%{_sharedstatedir}/gssproxy/hcc-enrollment.keytab
 %else
 rm -rf %{buildroot}%{python3_sitelib}/ipahcc
@@ -424,9 +427,10 @@ rm -rf %{buildroot}%{python3_sitelib}/ipahcc*.egg-info
 %make install_mockapi install_client_prepare
 %py3_shebang_fix %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-client-prepare
 %else
-rm -rf %{buildroot}%{python3_sitelib}/ipahcc/mockapi
+rm %{buildroot}%{python3_sitelib}/ipahcc/server/mockapi.py
+rm -f %{buildroot}%{python3_sitelib}/ipahcc/server/__pycache__/mockapi*.pyc
 rm %{buildroot}%{python3_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.py
-rm %{buildroot}%{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
+rm -f %{buildroot}%{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
 %endif
 
 %if %{with stageconsole}
@@ -462,7 +466,8 @@ rm -rf %{buildroot}%{python3_sitelib}/__pycache__
 %endif
 # exclude files that are in mockapi package
 %if %{with mockapi}
-%exclude %{python3_sitelib}/ipahcc/mockapi
+%exclude %{python3_sitelib}/ipahcc/server/mockapi.py
+%exclude %{python3_sitelib}/ipahcc/server/__pycache__/mockapi*.pyc
 %exclude %{python3_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.py
 %exclude %{python3_sitelib}/ipaserver/install/plugins/__pycache__/update_hcc_mockapi.*.pyc
 %endif
@@ -491,7 +496,8 @@ rm -rf %{buildroot}%{python3_sitelib}/__pycache__
 %files mockapi
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%{python3_sitelib}/ipahcc/mockapi
+%{python3_sitelib}/ipahcc/server/mockapi.py
+%{python3_sitelib}/ipahcc/server/__pycache__/mockapi*.pyc
 %{_datadir}/ipa-hcc/hcc_mockapi.py
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/httpd/conf.d/ipa-hcc-mockapi.conf
 %{python3_sitelib}/ipaserver/install/plugins/update_hcc_mockapi.py

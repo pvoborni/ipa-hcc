@@ -18,10 +18,10 @@ import requests
 from ipalib import errors
 from ipaplatform.paths import paths
 
-from ipahcc import hccplatform, sign
-from ipahcc.server.framework import UUID_RE, HTTPException, JSONWSGIApp, route
+from ipahcc import hccplatform
 
-from . import domain_token
+from . import domain_token, sign
+from .framework import UUID_RE, HTTPException, JSONWSGIApp, route
 
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 logger = logging.getLogger("ipa-mockapi")
@@ -47,10 +47,14 @@ class Application(JSONWSGIApp):
             "Loading mockapi JWK from %s", hccplatform.MOCKAPI_PRIV_JWK
         )
         try:
-            with open(hccplatform.MOCKAPI_PRIV_JWK, "r", encoding="utf-8") as f:
+            with open(
+                hccplatform.MOCKAPI_PRIV_JWK, "r", encoding="utf-8"
+            ) as f:
                 return sign.load_key(f.read())
         except OSError:
-            logger.exception("Unable to load %s", hccplatform.MOCKAPI_PRIV_JWK)
+            logger.exception(
+                "Unable to load %s", hccplatform.MOCKAPI_PRIV_JWK
+            )
             return None
 
     def get_access_token(self) -> str:  # pragma: no cover
