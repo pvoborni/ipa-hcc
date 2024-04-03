@@ -329,8 +329,8 @@ the server and then running `./install_server.sh` on the server.
 ## Release process
 
 1. Bump `VERSION` in `Makefile`, e.g. `VERSION = 0.99`
-2. Run `make version` to update `VERSION` in other files. It should modify
-   `pyproject.toml`, `setup.cfg`, and four `.py` files.
+2. Run `make version` to update `VERSION` in other files. It modifies
+   `src/ipahcc/_version.py`. The file is used by code and Python packaging.
 3. Commit the changes, e.g. `git commit --signoff -m "Release 0.99"`
 4. Push the changes and merge them into `main`
 5. Pull the release commit into your local checkout.

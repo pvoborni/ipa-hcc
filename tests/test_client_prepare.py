@@ -1,15 +1,13 @@
 import os
 import shutil
 import tempfile
-import unittest
 from unittest import mock
 
-import ipahcc_client_prepare as client_prepare
 from dns.rdtypes.ANY.URI import URI
 from ipaplatform.tasks import tasks
 
 import conftest
-from ipahcc import hccplatform
+from ipahcc.client import client_prepare
 
 CONFIG = {
     "domain": conftest.DOMAIN,
@@ -19,23 +17,15 @@ CONFIG = {
 }
 
 
-class TestAutoEnrollmentNoMock(unittest.TestCase):
-    def test_module_attributes(self):
-        self.assertEqual(hccplatform.RHSM_CERT, client_prepare.RHSM_CERT)
-        self.assertEqual(hccplatform.RHSM_KEY, client_prepare.RHSM_KEY)
-
-
 class TestAutoEnrollment(conftest.IPABaseTests):
     def setUp(self):
         super().setUp()
         self.tmpdir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmpdir)
 
-        modname = "ipahcc_client_prepare"
+        self.mock_hccplatform()
         p = mock.patch.multiple(
-            modname,
-            RHSM_CERT=conftest.RHSM_CERT,
-            RHSM_KEY=conftest.RHSM_KEY,
+            client_prepare,
             SYSCONFIG=os.path.join(self.tmpdir, "ipa-hcc-auto-enrollment"),
         )
         p.start()

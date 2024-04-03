@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """IPA client auto-enrollment for Hybrid Cloud Console
 
 Installation with older clients that lack PKINIT:
@@ -29,12 +28,13 @@ import uuid
 
 from dns.exception import DNSException
 from ipalib import constants, util, x509
-from ipaplatform.osinfo import osinfo
 from ipaplatform.paths import paths
 from ipaplatform.tasks import tasks
 from ipapython import ipautil
 from ipapython.dnsutil import query_srv
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
+
+from ipahcc import hccplatform
 
 try:
     # pylint: disable=ungrouped-imports
@@ -45,98 +45,10 @@ except ModuleNotFoundError:
         return False
 
 
-get_rhsm_config: typing.Optional[typing.Callable]
-try:
-    # pylint: disable=ungrouped-imports
-    from rhsm.config import get_config_parser as get_rhsm_config
-except ImportError:
-    get_rhsm_config = None
-
 FQDN = socket.gethostname()
 
-# version is updated by Makefile
-VERSION = "0.16"
-
-# copied from ipahcc.hccplatform
-DEVELOPMENT_MODE = True
-RHSM_CERT = "/etc/pki/consumer/cert.pem"
-RHSM_KEY = "/etc/pki/consumer/key.pem"
-RHSM_CONF = "/etc/rhsm/rhsm.conf"
-INSIGHTS_MACHINE_ID = "/etc/insights-client/machine-id"
-INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
-# Prod cert-api uses internal CA while stage uses a public CA
-IPA_DEFAULT_CONF = paths.IPA_DEFAULT_CONF
-HCC_DOMAIN_TYPE = "rhel-idm"
-HTTP_HEADERS = {
-    "User-Agent": f"IPA HCC auto-enrollment {VERSION} (IPA: {IPA_VERSION})",
-    "X-RH-IDM-Version": json.dumps(
-        {
-            "ipa-hcc": VERSION,
-            "ipa": IPA_VERSION,
-            "os-release-id": osinfo["ID"],
-            "os-release-version-id": osinfo["VERSION_ID"],
-        }
-    ),
-}
 
 logger = logging.getLogger(__name__)
-
-
-class ConsoleConfig(typing.NamedTuple):
-    env: str
-    rhsm_server: str
-    # base url for inventory v1
-    inventory_cert_url: str
-    # base url for idmsvc v1
-    idmsvc_cert_url: str
-
-
-PROD_CONSOLE = ConsoleConfig(
-    env="prod",
-    rhsm_server="subscription.rhsm.redhat.com",
-    inventory_cert_url="https://cert.console.redhat.com/api/inventory/v1",
-    idmsvc_cert_url="https://cert.console.redhat.com/api/idmsvc/v1",
-)
-
-STAGE_CONSOLE = ConsoleConfig(
-    env="stage",
-    rhsm_server="subscription.rhsm.stage.redhat.com",
-    inventory_cert_url="https://cert.console.stage.redhat.com/api/inventory/v1",
-    idmsvc_cert_url="https://cert.console.stage.redhat.com/api/idmsvc/v1",
-)
-
-ProxyUrl = typing.Optional[str]
-
-
-def detect_rhsm_config() -> typing.Tuple[ConsoleConfig, ProxyUrl]:
-    """Detect configuration from RHSM config"""
-    rhsm_server: str
-    proxy_url: ProxyUrl = None
-    if get_rhsm_config is not None:
-        logger.debug("Using RHSM config")
-        rc = get_rhsm_config()
-        rhsm_server = rc.get("server", "hostname").strip()
-        phost = rc.get("server", "proxy_hostname").strip()
-        if phost:
-            pscheme = rc.get("server", "proxy_scheme").strip() or "http"
-            pport = rc.get("server", "proxy_port").strip() or "3128"
-            puser = rc.get("server", "proxy_user").strip()
-            ppassword = rc.get("server", "proxy_password").strip()
-            proxy_auth = f"{puser}:{ppassword}@" if puser else ""
-            proxy_url = f"{pscheme}://{proxy_auth}{phost}:{pport}"
-        logger.debug(
-            "Detected RHSM server: %s, proxy: %s", rhsm_server, proxy_url
-        )
-    else:
-        logger.debug("RHSM is not available, default to prod")
-        rhsm_server = "subscription.rhsm.redhat.com"
-
-    if rhsm_server == STAGE_CONSOLE.rhsm_server:
-        cfg = STAGE_CONSOLE
-    else:
-        cfg = PROD_CONSOLE
-    logger.info("Detected configuration %s, RHSM proxy '%s'", cfg, proxy_url)
-    return cfg, proxy_url
 
 
 def check_arg_hostname(arg: str) -> str:
@@ -211,7 +123,7 @@ parser.add_argument(
     "-V",
     help="Show version number and exit",
     action="version",
-    version=f"ipa-hcc {VERSION} (IPA {IPA_VERSION})",
+    version=f"ipa-hcc {hccplatform.VERSION} (IPA {IPA_VERSION})",
 )
 parser.add_argument(
     "--insecure",
@@ -277,7 +189,7 @@ parser.set_defaults(
     console_proxy=None,
     nameservers=None,
 )
-if DEVELOPMENT_MODE:
+if hccplatform.DEVELOPMENT_MODE:
     g_ephemeral = parser.add_argument_group("Ephemeral environment")
     # presence of --dev-username enables Ephemeral login and fake identity
     g_ephemeral.add_argument(
@@ -367,7 +279,9 @@ class AutoEnrollment:
         self.token: typing.Optional[str] = None
         self.install_args: typing.Iterable[str] = ()
         self.automount_location: typing.Optional[str] = None
-        self.console_config: ConsoleConfig = PROD_CONSOLE
+        self.console_config: hccplatform.ConsoleConfig = (
+            hccplatform.PROD_CONSOLE
+        )
         # internals
         self.tmpdir: typing.Optional[str] = None
 
@@ -393,13 +307,13 @@ class AutoEnrollment:
         org_id = self.args.dev_org_id
         cn = self.args.dev_cert_cn
         if cn is None or org_id is None:
-            cert = x509.load_certificate_from_file(RHSM_CERT)
+            cert = x509.load_certificate_from_file(hccplatform.RHSM_CERT)
             nas = list(cert.subject)
             org_id = nas[0].value
             cn = nas[1].value
             logger.debug(
                 "Using cert info from %s: org_id: %s, cn: %s",
-                RHSM_CERT,
+                hccplatform.RHSM_CERT,
                 org_id,
                 cn,
             )
@@ -445,7 +359,7 @@ class AutoEnrollment:
             "Accept": "application/json",
             "Content-Type": "application/json",
         }
-        headers.update(HTTP_HEADERS)
+        headers.update(hccplatform.HTTP_HEADERS)
         if body is None:
             logger.debug("GET request %s: %s", url, body)
             req = urllib.request.Request(url, headers=headers)
@@ -458,7 +372,7 @@ class AutoEnrollment:
             assert req.get_method() == "POST"
 
         context = ssl.create_default_context(cafile=cafile)
-        context.load_cert_chain(RHSM_CERT, RHSM_KEY)
+        context.load_cert_chain(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY)
         if getattr(context, "post_handshake_auth", None) is not None:
             context.post_handshake_auth = True
         if verify:
@@ -468,7 +382,7 @@ class AutoEnrollment:
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
 
-        if DEVELOPMENT_MODE and self.args.dev_username:
+        if hccplatform.DEVELOPMENT_MODE and self.args.dev_username:
             self._ephemeral_config(req)
 
         # build URL opener with custom handlers
@@ -558,7 +472,7 @@ class AutoEnrollment:
 
     @property
     def pkinit_identity(self) -> str:
-        return f"FILE:{RHSM_CERT},{RHSM_KEY}"
+        return f"FILE:{hccplatform.RHSM_CERT},{hccplatform.RHSM_KEY}"
 
     @property
     def krb_name(self) -> str:
@@ -567,27 +481,27 @@ class AutoEnrollment:
         return os.path.join(self.tmpdir, "krb5.conf")
 
     def check_system_state(self) -> None:
-        for fname in (RHSM_CERT, RHSM_KEY):
+        for fname in (hccplatform.RHSM_CERT, hccplatform.RHSM_KEY):
             if not os.path.isfile(fname):
                 raise SystemStateError(
                     "Host is not registered with subscription-manager.",
                     "subscription-manager register",
                     fname,
                 )
-        if not os.path.isfile(INSIGHTS_MACHINE_ID):
+        if not os.path.isfile(hccplatform.INSIGHTS_MACHINE_ID):
             raise SystemStateError(
                 "Host is not registered with Insights.",
                 "insights-client --register",
-                INSIGHTS_MACHINE_ID,
+                hccplatform.INSIGHTS_MACHINE_ID,
             )
         # if INSIGHTS_HOST_DETAILS is missing, fall back to HTTP API call
-        if os.path.isfile(IPA_DEFAULT_CONF) and not self.args.upto:
+        if os.path.isfile(paths.IPA_DEFAULT_CONF) and not self.args.upto:
             raise SystemStateError(
-                "Host is already an IPA client.", None, IPA_DEFAULT_CONF
+                "Host is already an IPA client.", None, paths.IPA_DEFAULT_CONF
             )
 
     def enroll_host(self) -> None:
-        self.console_config, proxy_url = detect_rhsm_config()
+        self.console_config, proxy_url = hccplatform.detect_rhsm_config()
         if self.args.console_proxy is None and proxy_url is not None:
             logger.debug("Using console proxy from RHSM: %s", proxy_url)
             self.args.console_proxy = proxy_url
@@ -642,7 +556,7 @@ class AutoEnrollment:
         insights-client stores the result of Insights API query in a local file
         once the host is registered.
         """
-        with open(INSIGHTS_MACHINE_ID, encoding="utf-8") as f:
+        with open(hccplatform.INSIGHTS_MACHINE_ID, encoding="utf-8") as f:
             self.insights_machine_id = f.read().strip()
         result = self._read_host_details_file()
         if result is None:
@@ -664,11 +578,15 @@ class AutoEnrollment:
         'insights-client --register' execution.
         """
         try:
-            with open(INSIGHTS_HOST_DETAILS, encoding="utf-8") as f:
+            with open(
+                hccplatform.INSIGHTS_HOST_DETAILS, encoding="utf-8"
+            ) as f:
                 j = json.load(f)
         except (OSError, ValueError) as e:
             logger.debug(
-                "Failed to read JSON file %s: %s", INSIGHTS_HOST_DETAILS, e
+                "Failed to read JSON file %s: %s",
+                hccplatform.INSIGHTS_HOST_DETAILS,
+                e,
             )
             return None
         else:
@@ -770,7 +688,7 @@ class AutoEnrollment:
 
     def hcc_host_conf(self) -> dict:
         body = {
-            "domain_type": HCC_DOMAIN_TYPE,
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
         }
         for key in ["domain_name", "domain_id", "location"]:
             value = getattr(self.args, key)
@@ -797,24 +715,21 @@ class AutoEnrollment:
             logger.error("Failed to get host configuration from %s", url)
             raise SystemExit(2) from None
 
-        with open(self.ipa_cacert, "w", encoding="utf-8") as f:
-            f.write(j[HCC_DOMAIN_TYPE]["cabundle"])
-
-        if j["domain_type"] != HCC_DOMAIN_TYPE:
+        if j["domain_type"] != hccplatform.HCC_DOMAIN_TYPE:
             raise ValueError(j["domain_type"])
+        dt = hccplatform.HCC_DOMAIN_TYPE
+        with open(self.ipa_cacert, "w", encoding="utf-8") as f:
+            f.write(j[dt]["cabundle"])
+
         self.domain = j["domain_name"]
         self.domain_id = j["domain_id"]
         # TODO: make token required
         self.token = j.get("token")
-        self.realm = j[HCC_DOMAIN_TYPE]["realm_name"]
+        self.realm = j[dt]["realm_name"]
         # install args and automount location are optional
-        self.install_args = j[HCC_DOMAIN_TYPE].get(
-            "ipa_client_install_args", []
-        )
-        self.automount_location = j[HCC_DOMAIN_TYPE].get(
-            "automount_location", None
-        )
-        self.enrollment_servers = j[HCC_DOMAIN_TYPE]["enrollment_servers"]
+        self.install_args = j[dt].get("ipa_client_install_args", [])
+        self.automount_location = j[dt].get("automount_location", None)
+        self.enrollment_servers = j[dt]["enrollment_servers"]
         if typing.TYPE_CHECKING:
             assert self.enrollment_servers
         logger.info("Domain: %s", self.domain)
@@ -886,7 +801,7 @@ class AutoEnrollment:
             hostname=self.args.hostname,
         )
         body = {
-            "domain_type": HCC_DOMAIN_TYPE,
+            "domain_type": hccplatform.HCC_DOMAIN_TYPE,
             "domain_name": self.domain,
             "domain_id": self.domain_id,
         }

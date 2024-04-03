@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """IPA HCC client preparation service
 
 Prepares a host in stage and ephemeral testing environment
@@ -11,6 +10,7 @@ Prepares a host in stage and ephemeral testing environment
   configuration.
 - Run post fixers (e.g. SELinux bool for NFS home directory)
 """
+
 import argparse
 import json
 import logging
@@ -26,19 +26,16 @@ from ipaplatform.tasks import tasks
 from ipapython.dnsutil import get_ipa_resolver
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
-# version is updated by Makefile
-VERSION = "0.16"
+from ipahcc import hccplatform
 
 HCCCONF_URI = "_hccconf.podengo-project.internal."
-RHSM_CERT = "/etc/pki/consumer/cert.pem"
-RHSM_KEY = "/etc/pki/consumer/key.pem"
 SYSCONFIG = "/etc/sysconfig/ipa-hcc-auto-enrollment"
 
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(
-    prog="ipa-hcc-client-prepare",
-    description="IPA client prepare for testing of auto-enrollment",
+    prog="ipa-hcc-ephemeral-prepare",
+    description="IPA client pepare for testing of auto-enrollment",
 )
 
 parser.add_argument(
@@ -60,7 +57,7 @@ parser.add_argument(
     "-V",
     help="Show version number and exit",
     action="version",
-    version=f"ipa-hcc {VERSION} (IPA {IPA_VERSION})",
+    version=f"ipa-hcc {hccplatform.VERSION} (IPA {IPA_VERSION})",
 )
 
 
@@ -100,7 +97,7 @@ class ClientPrepare:
         }
         req = Request(url, headers=headers)
         context = ssl.create_default_context()
-        context.load_cert_chain(RHSM_CERT, RHSM_KEY)
+        context.load_cert_chain(hccplatform.RHSM_CERT, hccplatform.RHSM_KEY)
         if getattr(context, "post_handshake_auth", None) is not None:
             context.post_handshake_auth = True
         if verify:

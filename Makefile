@@ -16,8 +16,6 @@ DATADIR := $(shell rpm --eval '%{_datadir}')
 PYTHON := $(shell rpm --eval '%{python3}')
 # /usr/lib/pythonX.Y/site-packages
 PYTHON_SITELIB := $(shell $(PYTHON) -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
-# /usr/libexec
-LIBEXECDIR := $(shell rpm --eval '%{_libexecdir}')
 # /usr/lib/systemd/system
 UNITDIR:= $(shell rpm --eval '%{_unitdir}')
 # /usr/share/man
@@ -106,20 +104,10 @@ lint: ruff
 ruff:
 	tox -e ruff
 
-.PHONY: module_version
-module_version:
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' \
-		$(srcdir)/src/ipahcc/hccplatform.py \
-		$(srcdir)/src/ipahcc_auto_enrollment.py \
-		$(srcdir)/src/ipahcc_client_prepare.py \
-		$(srcdir)/src/ipahcc_stage_console.py
-
 .PHONY: version
-version: module_version
-	sed -i 's/^version\ =\ ".*/version = "$(VERSION)"/g' \
-		$(srcdir)/pyproject.toml
-	sed -i 's/^version\ =\ .*/version = $(VERSION)/g' \
-		$(srcdir)/setup.cfg
+version:
+	sed -i 's/^__version__\ =\ ".*\"/__version__ = "$(VERSION)"/g' \
+		$(srcdir)/src/ipahcc/_version.py
 
 # SELinux
 SELINUX_POLICYDIR = $(DATADIR)/selinux/packages/$(SELINUXTYPE)
@@ -144,7 +132,8 @@ rpkg: $(OPENAPI_YAML)
 	@rm -rf $(RPKGDIR)
 	@mkdir -p $(RPKGDIR)
 	rpkg local --outdir $(RPKGDIR) $(foreach cond,$(RPM_WITH),--with $(cond)) $(foreach cond,$(RPM_WITHOUT),--without $(cond))
-	rpmlint --ignore-unused-rpmlintrc --strict -r ipa-hcc.rpmlintrc $(RPKGDIR)
+	@# ignore python3-ipahcc+server meta pacakge
+	rpmlint --ignore-unused-rpmlintrc --strict -r ipa-hcc.rpmlintrc $(RPKGDIR)/noarch/ipa-hcc*.rpm $(RPKGDIR)/noarch/python3-ipahcc-*.rpm
 	@find $(RPKGDIR) -name '*.rpm' -printf "%f\n"
 
 $(SPECDIR)/ipa-hcc.spec: $(srcdir)/ipa-hcc.spec.rpkg .git/index $(MAKEFILE_LIST)
@@ -225,18 +214,9 @@ stubgen:
 .PHONY: install_python
 install_python:
 	$(PYTHON) setup.py install -O1 --root $(DEST) --prefix $(PREFIX)
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' \
-		$(DEST)$(PYTHON_SITELIB)/ipahcc/hccplatform.py \
-		$(DEST)$(PYTHON_SITELIB)/ipahcc_*.py
 
 .PHONY: install_client
 install_client:
-	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
-	$(CP_PD) $(srcdir)/src/ipahcc_auto_enrollment.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
-	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-auto-enrollment
-
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-auto-enrollment.service $(DEST)$(UNITDIR)/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/sysconfig
@@ -244,24 +224,10 @@ install_client:
 
 .PHONY: install_client_prepare
 install_client_prepare:
-	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
-	$(CP_PD) $(srcdir)/src/ipahcc_client_prepare.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
-	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-client-prepare
-
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-client-prepare.service $(DEST)$(UNITDIR)/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/sysconfig
 	$(CP_CONFIG) $(srcdir)/install/client/sysconfig/ipa-hcc-client-prepare $(DEST)$(SYSCONFDIR)/sysconfig/
-
-.PHONY: install_stage_console
-install_stage_console:
-	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
-	$(CP_PD) $(srcdir)/src/ipahcc_stage_console.py $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
-	chmod 755 $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
-	sed -i -e "1 s|^#!.*\bpython[^ ]*|#!$(PYTHON)|" $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
-	sed -i 's/^VERSION\ =\ ".*\"/VERSION = "$(VERSION)"/g' $(DEST)$(LIBEXECDIR)/ipa-hcc/ipa-hcc-stage-console
 
 .PHONY: install_server_plugin
 install_server_plugin:
@@ -273,7 +239,6 @@ install_server_plugin:
 	$(CP_PD) $(srcdir)/install/server/cacerts/* $(DEST)$(DATADIR)/ipa-hcc/cacerts/
 	$(MKDIR_P) $(DEST)$(UNITDIR)
 	$(CP_PD) $(srcdir)/install/server/systemd/ipa-hcc-update.* $(DEST)$(UNITDIR)/
-	$(MKDIR_P) $(DEST)$(LIBEXECDIR)/ipa-hcc
 	$(MKDIR_P) $(DEST)$(MANDIR)/man1
 	$(CP_PD) $(srcdir)/install/server/man/*.1 $(DEST)$(MANDIR)/man1/
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa/updates/

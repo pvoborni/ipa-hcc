@@ -1,7 +1,5 @@
-import configparser
 import json
 import os
-import textwrap
 import unittest
 from email.message import Message
 from unittest import mock
@@ -13,8 +11,8 @@ from ipaplatform.paths import paths
 from ipapython import ipautil
 
 import conftest
-import ipahcc_auto_enrollment as auto_enrollment
 from ipahcc import hccplatform
+from ipahcc.client import auto_enrollment
 from ipahcc.server import schema
 
 HOST_CONF_REQUEST = {
@@ -51,37 +49,8 @@ REGISTER_RESPONSE = {"status": "ok", "kdc_cabundle": conftest.KDC_CA_DATA}
 
 IDMSVC_API_URL = f"https://{conftest.SERVER_FQDN}/api/idmsvc/v1"
 
-RHSM_CONFIG = configparser.ConfigParser()
-RHSM_CONFIG.read_string(
-    textwrap.dedent(
-        """
-        [server]
-        hostname=subscription.rhsm.redhat.com
-        proxy_hostname=
-        proxy_scheme=http
-        proxy_port=
-        proxy_user=
-        proxy_password=
-        """
-    )
-)
-
 
 class TestAutoEnrollmentNoMock(unittest.TestCase):
-    def test_module_attributes(self):
-        self.assertEqual(hccplatform.RHSM_CERT, auto_enrollment.RHSM_CERT)
-        self.assertEqual(hccplatform.RHSM_KEY, auto_enrollment.RHSM_KEY)
-        self.assertEqual(
-            hccplatform.HCC_DOMAIN_TYPE, auto_enrollment.HCC_DOMAIN_TYPE
-        )
-        self.assertEqual(
-            hccplatform.INSIGHTS_HOST_DETAILS,
-            auto_enrollment.INSIGHTS_HOST_DETAILS,
-        )
-        self.assertEqual(
-            hccplatform.HTTP_HEADERS, auto_enrollment.HTTP_HEADERS
-        )
-
     def test_schema(self):
         schema.validate_schema(HOST_CONF_REQUEST, "HostConfRequest")
         schema.validate_schema(HOST_CONF_RESPONSE, "HostConfResponse")
@@ -92,19 +61,7 @@ class TestAutoEnrollmentNoMock(unittest.TestCase):
 class TestAutoEnrollment(conftest.IPABaseTests):
     def setUp(self):
         super().setUp()
-        modname = "ipahcc_auto_enrollment"
-        p = mock.patch.multiple(
-            modname,
-            RHSM_CERT=conftest.RHSM_CERT,
-            RHSM_KEY=conftest.RHSM_KEY,
-            RHSM_CONF=conftest.NO_FILE,
-            INSIGHTS_HOST_DETAILS=conftest.HOST_DETAILS,
-            INSIGHTS_MACHINE_ID=conftest.MACHINE_ID,
-            IPA_DEFAULT_CONF=conftest.NO_FILE,
-            get_rhsm_config=mock.Mock(return_value=RHSM_CONFIG),
-        )
-        p.start()
-        self.addCleanup(p.stop)
+        self.mock_hccplatform()
 
         p = mock.patch.object(ipautil, "run")
         self.m_run = p.start()
@@ -165,7 +122,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
         self.assertEqual(args.dev_username, None)
         self.assertEqual(args.dev_cert_cn, None)
 
-        if auto_enrollment.DEVELOPMENT_MODE:
+        if hccplatform.DEVELOPMENT_MODE:
             args = self.parse_args(
                 # fmt: off
                 "--dev-username", "jdoe",
@@ -197,17 +154,18 @@ class TestAutoEnrollment(conftest.IPABaseTests):
             conftest.CLIENT_FQDN,
         )
 
+        # any file
+        with mock.patch("ipaplatform.paths.paths.IPA_DEFAULT_CONF", __file__):
+            self.assert_args_error(
+                args, expected="Host is already an IPA client."
+            )
+
         # module vars are already mocked
-        auto_enrollment.IPA_DEFAULT_CONF = conftest.RHSM_CERT  # any file
-        self.assert_args_error(
-            args, expected="Host is already an IPA client."
-        )
-        auto_enrollment.IPA_DEFAULT_CONF = conftest.NO_FILE
-        auto_enrollment.INSIGHTS_MACHINE_ID = conftest.NO_FILE
+        hccplatform.INSIGHTS_MACHINE_ID = conftest.NO_FILE
         self.assert_args_error(
             args, expected="Host is not registered with Insights."
         )
-        auto_enrollment.RHSM_CERT = conftest.NO_FILE
+        hccplatform.RHSM_CERT = conftest.NO_FILE
         self.assert_args_error(
             args,
             expected="Host is not registered with subscription-manager.",
@@ -266,7 +224,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
 
     def test_inventory_from_api(self):
         args = self.parse_args()
-        auto_enrollment.INSIGHTS_HOST_DETAILS = conftest.NO_FILE
+        hccplatform.INSIGHTS_HOST_DETAILS = conftest.NO_FILE
         # first call to urlopen gets host details from API
         with open(conftest.HOST_DETAILS, encoding="utf-8") as f:
             host_details = json.load(f)
@@ -383,7 +341,7 @@ class TestAutoEnrollment(conftest.IPABaseTests):
                 "--realm",
                 conftest.REALM,
                 "--pkinit-identity",
-                f"FILE:{auto_enrollment.RHSM_CERT},{auto_enrollment.RHSM_KEY}",
+                f"FILE:{hccplatform.RHSM_CERT},{hccplatform.RHSM_KEY}",
                 "--pkinit-anchor",
                 f"FILE:{tmpdir}/kdc_ca.crt",
                 "--pkinit-anchor",

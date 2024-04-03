@@ -1,5 +1,6 @@
 # pylint: disable=too-many-locals,ungrouped-imports
 
+import configparser
 import contextlib
 import importlib
 import io
@@ -7,6 +8,7 @@ import json
 import logging
 import os
 import sys
+import textwrap
 import typing
 import unittest
 from http.client import responses as http_responses
@@ -60,6 +62,21 @@ IPA_CA_CERTINFO = create_certinfo(
     nickname=IPA_CA_NICKNAME,
 )
 KDC_CA_DATA = read_cert_dir(KDC_CA_DIR)
+
+RHSM_CONFIG = configparser.ConfigParser()
+RHSM_CONFIG.read_string(
+    textwrap.dedent(
+        """
+        [server]
+        hostname=subscription.rhsm.redhat.com
+        proxy_hostname=
+        proxy_scheme=http
+        proxy_port=
+        proxy_user=
+        proxy_password=
+        """
+    )
+)
 
 try:
     # pylint: disable=unused-import,ungrouped-imports
@@ -171,18 +188,17 @@ class IPABaseTests(unittest.TestCase):
             dev_username=None,
             dev_password=None,
         )
-        detect_rhsm_config = mock.Mock()
-        detect_rhsm_config.return_value = hccplatform.PROD_CONSOLE, None
 
         p = mock.patch.multiple(
             "ipahcc.hccplatform",
             RHSM_CERT=RHSM_CERT,
             RHSM_KEY=RHSM_KEY,
             INSIGHTS_HOST_DETAILS=HOST_DETAILS,
+            INSIGHTS_MACHINE_ID=MACHINE_ID,
             HCC_CACERTS_DIR=KDC_CA_DIR,
             HCC_ENROLLMENT_AGENT_KEYTAB=NO_FILE,
             HCCConfig=cfgcls,
-            detect_rhsm_config=detect_rhsm_config,
+            get_rhsm_config=mock.Mock(return_value=RHSM_CONFIG),
         )
         p.start()
         self.addCleanup(p.stop)

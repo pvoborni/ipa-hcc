@@ -18,6 +18,8 @@ from ipaplatform.constants import User, constants
 from ipaplatform.osinfo import osinfo
 from ipapython.version import VENDOR_VERSION as IPA_VERSION
 
+from ._version import __version__ as VERSION
+
 get_rhsm_config: typing.Optional[typing.Callable]
 try:
     # pylint: disable=ungrouped-imports
@@ -26,9 +28,6 @@ except ImportError:
     get_rhsm_config = None
 
 logger = logging.getLogger(__name__)
-
-# version is updated by Makefile
-VERSION = "0.16"
 
 # common HTTP request headers
 HTTP_HEADERS = {
@@ -59,6 +58,7 @@ HCC_CACERTS_DIR = "/usr/share/ipa-hcc/cacerts"
 RHSM_CERT = "/etc/pki/consumer/cert.pem"
 RHSM_KEY = "/etc/pki/consumer/key.pem"
 INSIGHTS_HOST_DETAILS = "/var/lib/insights/host-details.json"
+INSIGHTS_MACHINE_ID = "/etc/insights-client/machine-id"
 
 # Hybrid Cloud Console and Host Based Inventory API
 # see https://access.redhat.com/articles/3626371

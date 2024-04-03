@@ -10,9 +10,15 @@ from ipahcc.server.util import parse_rhsm_cert
 
 class IPAClientTests(conftest.IPABaseTests):
     def test_auto_enrollment_help(self):
-        import ipahcc_auto_enrollment
+        from ipahcc.client import (
+            auto_enrollment,
+            client_prepare,
+            stage_console,
+        )
 
-        self.assert_cli_run(ipahcc_auto_enrollment.main, "--help")
+        self.assert_cli_run(auto_enrollment.main, "--help")
+        self.assert_cli_run(client_prepare.main, "--help")
+        self.assert_cli_run(stage_console.main, "--help")
 
 
 @conftest.requires_ipaserver

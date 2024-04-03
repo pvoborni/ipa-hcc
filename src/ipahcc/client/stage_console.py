@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """IPA HCC stage console setup
 
 Configure system to use stage console services:
@@ -9,6 +8,7 @@ Configure system to use stage console services:
 WARNING: This script is for testing only. It makes no effort to retain
 existing configuration.
 """
+
 import argparse
 import configparser
 import logging
@@ -17,8 +17,7 @@ import shutil
 import subprocess
 from urllib.parse import urlparse
 
-# version is updated by Makefile
-VERSION = "0.16"
+from ipahcc import hccplatform
 
 RHSM_CONF_FILE = pathlib.Path("/etc/rhsm/rhsm.conf")
 RHSM_SERVER_HOSTNAME = "subscription.rhsm.{suffix}"
@@ -84,7 +83,7 @@ parser.add_argument(
     "-V",
     help="Show version number and exit",
     action="version",
-    version=f"ipa-hcc {VERSION}",
+    version=f"ipa-hcc {hccplatform.VERSION}",
 )
 parser.add_argument(
     "suffix",
@@ -136,12 +135,12 @@ def configure_rhsm(suffix: str, proxy: str):
 def configure_rhc(suffix: str, proxy: str):
     logger.info("Configuring RHC for %s", suffix)
     _backup_file(RHC_CONFIG_TOML_FILE)
-    with RHC_CONFIG_TOML_FILE.open("w") as f:
+    with RHC_CONFIG_TOML_FILE.open("w", encoding="utf-8") as f:
         f.write(RHC_CONF.format(suffix=suffix))
 
     logger.info("Configuring rhcd.service for proxy: %s", proxy)
     RHCD_SYSTEMD_PROXY_CONF_FILE.parent.mkdir(exist_ok=True)
-    with RHCD_SYSTEMD_PROXY_CONF_FILE.open("w") as f:
+    with RHCD_SYSTEMD_PROXY_CONF_FILE.open("w", encoding="utf-8") as f:
         f.write(RHCD_SYSTEMD_PROXY_CONF.format(proxy=proxy))
     logger.info("Reloading systemd daemon and try-restarting rhcd.service")
     subprocess.check_call(["/bin/systemctl", "daemon-reload"])
@@ -155,7 +154,7 @@ def configure_insights_client(suffix: str, proxy: str):
     _backup_file(INSIGHTS_CLIENT_CONF_FILE)
     cfg = configparser.ConfigParser()
     cfg.add_section("insights-client")
-    with INSIGHTS_CLIENT_CONF_FILE.open() as f:
+    with INSIGHTS_CLIENT_CONF_FILE.open(encoding="utf-8") as f:
         cfg.read_file(f)
     # https://github.com/RedHatInsights/insights-client?tab=readme-ov-file#recommended-developer-config
     cfg.set(
@@ -164,7 +163,7 @@ def configure_insights_client(suffix: str, proxy: str):
     # insight-cores auto-config should detect rhsm_proxy_hostname, too.
     # Set proxy again in case auto-config is disabled.
     cfg.set("insights-client", "proxy", proxy)
-    with INSIGHTS_CLIENT_CONF_FILE.open("w") as f:
+    with INSIGHTS_CLIENT_CONF_FILE.open("w", encoding="utf-8") as f:
         cfg.write(f, space_around_delimiters=False)
 
 
@@ -175,7 +174,7 @@ def configure_ipahcc_auto_enrollment(suffix: str, proxy: str):
         proxy,
     )
     _backup_file(IPAHCC_AUTO_ENROLLMENT_ENVFILE)
-    with IPAHCC_AUTO_ENROLLMENT_ENVFILE.open("w") as f:
+    with IPAHCC_AUTO_ENROLLMENT_ENVFILE.open("w", encoding="utf-8") as f:
         f.write(
             IPAHCC_AUTO_ENROLLMENT_CONF.format(
                 suffix=suffix,

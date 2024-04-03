@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ipahcc"
-version = "0.16"
+dynamic = ["version"]
 description = "IPA enrollment agent for Red Hat Hybrid Cloud Console"
 readme = "README.md"
 authors = [
@@ -14,32 +14,39 @@ license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.6"
 dependencies = [
     "requests",
-    "cryptography",
-    "ipaclient",
-    "jsonschema",
-    "jwcrypto",
+    "ipalib",
     # RHEL 8 with Python 3.6
     "netaddr < 1.0.0; python_version == '3.6'",
 ]
 
+[project.optional-dependencies]
+server = [
+    "cryptography",
+    "ipaclient",
+    "jsonschema",
+    "jwcrypto",
+]
+
 [project.scripts]
 ipa-hcc = "ipahcc.server.cli:main"
+ipa-hcc-auto-enrollment = "ipahcc.client.auto_enrollment:main"
+ipa-hcc-client-prepare = "ipahcc.client.client_prepare:main"
+ipa-hcc-stage-console = "ipahcc.client.stage_console:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = [
     "ipahcc",
+    "ipahcc.client",
     "ipahcc.server",
     "ipahcc.server.schema",
     "ipahcc.server.sign",
     "ipaserver.install.plugins",
     "ipaserver.plugins",
 ]
-py-modules = [
-    "ipahcc_auto_enrollment",
-    "ipahcc_client_prepare",
-    "ipahcc_stage_console",
-]
+
+[tool.setuptools.dynamic]
+version = {attr = "ipahcc._version.__version__"}
 
 [tool.setuptools.package-data]
 "ipahcc" = ["py.typed"]
@@ -126,8 +133,8 @@ extend-exclude = ["api/*.py"]
 # don't resort auto-generated stub files
 "stubs/*" = ["I"]
 # allow print in CLI scripts
+"src/ipahcc/client/auto_enrollment.py" = ["T20"]
 "src/ipahcc/server/cli.py" = ["T20"]
-"src/ipahcc_auto_enrollment.py" = ["T20"]
 "src/ipahcc/server/sign/__main__.py" = ["T20"]
 
 [tool.ruff.isort]
