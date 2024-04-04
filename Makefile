@@ -231,10 +231,8 @@ install_client_prepare:
 
 .PHONY: install_server_plugin
 install_server_plugin:
-	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa
-	$(CP_CONFIG) $(srcdir)/install/server/ipa/hcc.conf $(DEST)$(SYSCONFDIR)/ipa/
-	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/ipa/hcc
-
+	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc
+	$(CP_CONFIG) $(srcdir)/install/server/ipa/hcc.conf $(DEST)$(DATADIR)/ipa-hcc/hcc.conf.example
 	$(MKDIR_P) $(DEST)$(DATADIR)/ipa-hcc/cacerts
 	$(CP_PD) $(srcdir)/install/server/cacerts/* $(DEST)$(DATADIR)/ipa-hcc/cacerts/
 	$(MKDIR_P) $(DEST)$(UNITDIR)

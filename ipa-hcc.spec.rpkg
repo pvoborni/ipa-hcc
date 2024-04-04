@@ -419,6 +419,9 @@ rm -f %{buildroot}%{python3_sitelib}/ipahcc/server/__pycache__/mockapi*.pyc
 %{__mkdir_p} %{buildroot}%{_libexecdir}/ipa-hcc
 
 %if %{with server}
+# ghost config
+%{__mkdir_p} %{buildroot}%{_sysconfdir}/ipa
+touch %{buildroot}%{_sysconfdir}/ipa/hcc.conf
 
 %if %{with pyproject_macros}
 %pyproject_install
@@ -451,6 +454,7 @@ rm %{buildroot}%{_bindir}/ipa-hcc-auto-enrollment
 %make install_mockapi install_client_prepare
 mv %{buildroot}%{_bindir}/ipa-hcc-client-prepare %{buildroot}%{_libexecdir}/ipa-hcc/
 %py3_shebang_fix %{buildroot}%{_libexecdir}/ipa-hcc/ipa-hcc-client-prepare
+%{__mkdir_p} %{buildroot}%{_sysconfdir}/ipa/hcc
 %else
 rm %{buildroot}%{_bindir}/ipa-hcc-client-prepare
 rm %{buildroot}%{python3_sitelib}/ipahcc/server/mockapi.py
@@ -496,11 +500,12 @@ rm -rf %{buildroot}%{python3_sitelib}/__pycache__
 %files server
 %doc README.md CONTRIBUTORS.txt
 %license COPYING
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
+%ghost %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/ipa/hcc.conf
 %{_sbindir}/ipa-hcc
 %{_mandir}/man1/ipa-hcc.1*
 %dir %{_datadir}/ipa-hcc
 %{_datadir}/ipa-hcc/cacerts
+%{_datadir}/ipa-hcc/hcc.conf.example
 %{_unitdir}/ipa-hcc-update.*
 # exclude files that are in mockapi package
 %if %{with mockapi}

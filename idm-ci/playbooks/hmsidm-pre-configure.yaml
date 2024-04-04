@@ -20,10 +20,11 @@
         file: "{{ playbook_dir }}/../config/hmsidm-config.yaml"
         name: hmsidm_config
 
-    - name: Configure /etc/ipa/hcc.conf
+    - name: Configure /etc/ipa/hcc.conf (not prod or stage)
       template:
         src: hcc.conf.j2
         dest: /etc/ipa/hcc.conf
+      when: hmsidm_config.rhc_env in ["stage-mockapi", "ephemeral", "compose"]
 
     # See https://access.redhat.com/articles/3626371
     - name: Write Red Hat API offline token to /etc/ipa/hcc/refresh_token
