@@ -1,4 +1,4 @@
-VERSION = 0.16
+VERSION = 0.17
 RPM_WITH = client mockapi stageconsole
 RPM_WITHOHT =
 
