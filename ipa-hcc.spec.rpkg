@@ -205,7 +205,7 @@ getent passwd ipahcc >/dev/null || useradd -r -g ipaapi -s /sbin/nologin -d / -c
 %postun server
 # remove pkinit_anchors line from KRB5 KDC config
 sed --in-place=.bak '/\/usr\/share\/ipa-hcc\/cacerts/d' /var/kerberos/krb5kdc/kdc.conf || :
-systemctl try-restart krb5kdc.service || :
+/bin/systemctl try-restart krb5kdc.service || :
 %systemd_postun ipa-hcc-update.service
 %systemd_postun ipa-hcc-update.timer
 
@@ -296,6 +296,7 @@ Summary: Automatic IPA client enrollment for Hybrid Cloud Console
 BuildArch: noarch
 
 Requires: python3-ipahcc = %{version}-%{release}
+Requires: %{ipa_name}-client >= %{ipa_version}
 # ipa-client RHEL 8.7, 9.1, and ealier, do not come with pkinit
 Requires: krb5-pkinit-openssl
 Recommends: subscription-manager
