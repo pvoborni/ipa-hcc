@@ -1,0 +1,3 @@
+# Account for registration agent's mod_wsgi daemon
+u	ipahcc	-	"IPA Hybrid Cloud Console enrollment service"	-	-
+m	ipahcc	ipaapi
