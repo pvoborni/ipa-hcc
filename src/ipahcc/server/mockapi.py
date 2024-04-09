@@ -137,11 +137,12 @@ class Application(JSONWSGIApp):
             )
 
         j = resp.json()
-        if j["total"] != 1:
+        if j["total"] == 0:
             raise HTTPException(
                 404,
                 f"Unknown host {inventory_id}.",
             )
+        # use first entry, HBI can return multiple entries
         result = j["results"][0]
         fqdn = result["fqdn"]
         rhsm_id = result["subscription_manager_id"]

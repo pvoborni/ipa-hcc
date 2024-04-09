@@ -555,20 +555,36 @@ class AutoEnrollment:
 
         insights-client stores the result of Insights API query in a local file
         once the host is registered.
+
+        Returns first result entry with matching insights id.
         """
         with open(hccplatform.INSIGHTS_MACHINE_ID, encoding="utf-8") as f:
             self.insights_machine_id = f.read().strip()
-        result = self._read_host_details_file()
-        if result is None:
-            result = self._get_host_details_api()
-        self.inventory_id = result["results"][0]["id"]
+        entry = self._read_host_details_file()
+        if entry is None:
+            entry = self._get_host_details_api()
+        self.inventory_id = entry["id"]
         logger.info(
             "Host '%s' has inventory id '%s', insights id '%s'.",
             self.args.hostname,
             self.inventory_id,
             self.insights_machine_id,
         )
-        return result
+        return entry
+
+    def _filter_host_details(
+        self, result: dict, insights_id: str
+    ) -> typing.Optional[dict]:
+        """Check and filter matching host detail entry"""
+        if result.get("total", 0) == 0:
+            logger.debug("Empty result")
+            return None
+        # API can return multiple entries from different reporters like
+        # puptoo, cloud-connector, or rhsm-system-profile-bridge.
+        for entry in result.get("results", []):
+            if entry.get("insights_id") == insights_id:
+                return entry
+        return None
 
     def _read_host_details_file(self) -> typing.Optional[dict]:
         """Attempt to read host-details.json file
@@ -590,9 +606,9 @@ class AutoEnrollment:
             )
             return None
         else:
-            if j["total"] != 1:
-                return None
-            return j
+            if typing.TYPE_CHECKING:
+                assert isinstance(self.insights_machine_id, str)
+            return self._filter_host_details(j, self.insights_machine_id)
 
     def _get_host_details_api(self) -> dict:
         """Fetch host details from Insights API"""
@@ -616,13 +632,15 @@ class AutoEnrollment:
                 )
                 break
             else:
-                if j["total"] == 1 and j["results"][0]["insights_id"] == mid:
-                    return j
+                logger.debug(j)
+                entry = self._filter_host_details(j, mid)
+                if entry is not None:
+                    return entry
                 else:
                     logger.error("%s not in result", mid)
-                logger.info("Waiting for %i seconds", sleep_dur)
-                time.sleep(sleep_dur)
-                sleep_dur *= 2
+                    logger.info("Waiting for %i seconds", sleep_dur)
+                    time.sleep(sleep_dur)
+                    sleep_dur *= 2
         # TODO: error message
         raise RuntimeError("Unable to find machine in host inventory")
 
