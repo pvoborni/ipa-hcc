@@ -582,6 +582,7 @@ install -p -D -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/ipa-hcc.conf
 %license COPYING
 %attr(0755,root,root) %{_libexecdir}/ipa-hcc/ipa-hcc-auto-enrollment
 %attr(0644,root,root) %{_unitdir}/ipa-hcc-auto-enrollment.service
+%attr(0644,root,root) %{_presetdir}/80-ipa-hcc-auto-enrollment.preset
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/ipa-hcc-auto-enrollment
 %endif
 
