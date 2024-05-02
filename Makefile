@@ -18,6 +18,8 @@ PYTHON := $(shell rpm --eval '%{python3}')
 PYTHON_SITELIB := $(shell $(PYTHON) -c 'from sys import version_info as v; print("/usr/lib/python{}.{}/site-packages".format(v.major, v.minor))')
 # /usr/lib/systemd/system
 UNITDIR:= $(shell rpm --eval '%{_unitdir}')
+# /usr/lib/systemd/system-preset
+PRESETDIR := $(shell rpm --eval '%{_presetdir}')
 # /usr/share/man
 MANDIR:= $(shell rpm --eval '%{_mandir}')
 # /var/lib
@@ -221,6 +223,9 @@ install_client:
 	$(CP_PD) $(srcdir)/install/client/systemd/ipa-hcc-auto-enrollment.service $(DEST)$(UNITDIR)/
 	$(MKDIR_P) $(DEST)$(SYSCONFDIR)/sysconfig
 	$(CP_CONFIG) $(srcdir)/install/client/sysconfig/ipa-hcc-auto-enrollment $(DEST)$(SYSCONFDIR)/sysconfig/
+	# create directory for systemd presets
+	$(MKDIR_P) $(DEST)$(PRESETDIR)
+	$(CP_PD) $(srcdir)/install/client/systemd/80-ipa-hcc-auto-enrollment.preset $(DEST)$(PRESETDIR)/
 
 .PHONY: install_client_prepare
 install_client_prepare:
