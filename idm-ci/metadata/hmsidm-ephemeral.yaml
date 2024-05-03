@@ -64,4 +64,5 @@ phases:
   - name: teardown
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
+        stop-on-error: "False"
       - playbook: teardown/mrack-destroy.yaml

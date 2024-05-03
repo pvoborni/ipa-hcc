@@ -63,8 +63,11 @@ phases:
         extra_vars:
           target_group: ipaclient
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
-  - name: teardown
+  - name: collect
     steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/fetch-logs.yaml
+  - name: teardown
+    steps:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-disconnect.yaml
+        stop-on-error: "False"
       - playbook: teardown/mrack-destroy.yaml
