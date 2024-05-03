@@ -3,6 +3,17 @@
   become: true
   become_method: sudo
   tasks:
+    - name: Get current user on localhost
+      command: whoami
+      register: whoami_result
+      delegate_to: localhost
+    - name: Set current_user variable
+      set_fact:
+        current_user: "{{ whoami_result.stdout }}"
+    - name: Print current user on localhost
+      debug:
+        msg: "{{ current_user }}"
+
     - name: Create misc directiry
       file:
         state: directory
@@ -29,11 +40,13 @@
       archive:
         path: /var/log/*
         dest: var-log.tgz
+        owner: "{{ ansible_user }}"
 
     - name: Create log dir on controller
       file:
         state: directory
         path: "{{ twd }}/logs/{{ inventory_hostname }}"
+        owner: "{{ current_user }}"
       delegate_to: localhost
     - name: Fetch system logs archive
       synchronize:
@@ -46,17 +59,15 @@
         src: "{{ twd }}/{{ inventory_hostname }}-var-log.tgz"
         dest: "{{ twd }}/logs/{{ inventory_hostname }}"
         mode: "a+rX"
+        owner: "{{ current_user }}"
       delegate_to: localhost
     - name: Remove system logs archive
       file:
         state: absent
         path: "{{ twd }}/{{ inventory_hostname }}-var-log.tgz"
       delegate_to: localhost
-    # FileNotFoundError: [Errno 2] No such file or directory: '/builds/identity-management/idmocp/ipa-hcc/3522044/11277020/logs/client92.rhel79.hmsidm.test/README'
-    - name: Create workaround for "idm-artifacts upload" bug
-      file:
-        state: touch
-        path: "{{ twd }}/logs/{{ inventory_hostname }}/README"
+    - name: Remove all symlinks
+      command: "find {{ twd }}/logs/{{ inventory_hostname }} -type l -delete"
       delegate_to: localhost
     - name: Find log files
       command: "find {{ twd }}/logs/{{ inventory_hostname }} -type f"
