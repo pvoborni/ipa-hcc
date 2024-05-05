@@ -43,6 +43,17 @@ phases:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-configure.yaml
       - playbook: prep/install-ipa-packages.yaml
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-install-packages.yaml
+      # override client service enablement done by preset so that we can control
+      # when to execute the ipa-hcc-auto-enrollment directly
+      - playbook: |
+          - hosts: ipaclient
+            become: true
+            become_method: sudo
+            tasks:
+              - name: Disable ipa-hcc-auto-enrollment on clients
+                ansible.builtin.systemd_service:
+                  name: ipa-hcc-auto-enrollment
+                  enabled: false
       - playbook: prep/firewall.yaml
       - playbook: prep/ipa-network.yaml
   - name: test
