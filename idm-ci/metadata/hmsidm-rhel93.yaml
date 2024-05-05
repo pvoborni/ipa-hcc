@@ -62,6 +62,14 @@ phases:
       - playbook: ../ipa-hcc/idm-ci/playbooks/rhc-connect.yaml
         extra_vars:
           target_group: ipaclient
+      - command: |
+          cat /var/log/ipaclient-install.log || true
+          journalctl -eu ipa-hcc-auto-enrollment.service
+        host: client93.rhel93.hmsidm.test
+      - command: |
+          cat /var/log/ipaclient-install.log || true
+          journalctl -eu ipa-hcc-auto-enrollment.service
+        host: client89.rhel93.hmsidm.test
       - playbook: ../ipa-hcc/idm-ci/playbooks/hmsidm-test.yaml
   - name: collect
     steps:
