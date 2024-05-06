@@ -236,16 +236,16 @@ class HCCConfig:
         # special case for testing, only proxy requests to stage console.
         elif proxy == HCC_STAGE_PROXY:
             return {
-                'https://subscription.rhsm.stage.redhat.com': HCC_STAGE_PROXY,
-                'https://cert.console.stage.redhat.com': HCC_STAGE_PROXY,
-                'https://console.stage.redhat.com': HCC_STAGE_PROXY,
-                'https://sso.stage.redhat.com': HCC_STAGE_PROXY,
+                "https://subscription.rhsm.stage.redhat.com": HCC_STAGE_PROXY,
+                "https://cert.console.stage.redhat.com": HCC_STAGE_PROXY,
+                "https://console.stage.redhat.com": HCC_STAGE_PROXY,
+                "https://sso.stage.redhat.com": HCC_STAGE_PROXY,
             }
         # use proxy for https and http
         else:
             return {
-                "https://": proxy,
-                "http://": proxy,
+                "https": proxy,
+                "http": proxy,
             }
 
     @property
