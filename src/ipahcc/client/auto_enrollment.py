@@ -407,6 +407,9 @@ class AutoEnrollment:
                 req.get_method(),
                 req.get_full_url(),
             )
+            request_id = e.headers.get("x-rh-insights-request-id")
+            if request_id:
+                logger.error("Request ID: %s", request_id)
             if e.headers.get("content-type") == "application/json":
                 j = json.load(e.fp)
                 for error in j.get("errors", ()):
