@@ -799,4 +799,5 @@ class HCCAPI:
             raise APIError.from_response(resp, 4, str(e)) from None
         else:
             logger.debug("response: %s", json.dumps(resp.json(), indent=2))
+            logger.debug("headers: %s", resp.headers)
             return resp
